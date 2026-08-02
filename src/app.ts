@@ -6,6 +6,8 @@ import mongoose from 'mongoose';
 import { env, isProduction } from './config/env';
 import { notFound } from './middleware/notFound';
 import { errorHandler } from './middleware/error';
+import { globalLimiter } from './middleware/rateLimit';
+import { sanitizeRequest } from './middleware/sanitize';
 import { sendSuccess } from './utils';
 
 const DB_STATE: Record<number, string> = {
@@ -49,6 +51,11 @@ export function createApp(): Application {
 
   app.use(morgan(isProduction ? 'combined' : 'dev'));
 
+  // After the body parsers, so req.body exists to clean.
+  app.use(sanitizeRequest);
+
+  // Health check stays above the limiter — a platform probe polling every few
+  // seconds must not exhaust the budget and report the service as down.
   app.get('/api/health', (_req: Request, res: Response) => {
     const state = mongoose.connection.readyState;
 
@@ -67,6 +74,8 @@ export function createApp(): Application {
       state === 1 ? 200 : 503,
     );
   });
+
+  app.use('/api', globalLimiter);
 
   // Routes go here (Phase C).
 

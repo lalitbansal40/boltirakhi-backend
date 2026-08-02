@@ -1,0 +1,55 @@
+import { rateLimit, ipKeyGenerator, type Options } from 'express-rate-limit';
+import type { Request, Response } from 'express';
+
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+
+// Matches the error contract so a 429 is not the one response shape clients
+// have to special-case.
+function limitHandler(_req: Request, res: Response): void {
+  res.status(429).json({
+    success: false,
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many requests, please try again later',
+    },
+  });
+}
+
+const shared: Partial<Options> = {
+  // `limit` — v7 renamed it from `max`, and passing `max` is ignored silently,
+  // which looks exactly like a limiter that works until you test it.
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  handler: limitHandler,
+};
+
+/**
+ * Blanket per-IP limit. `app.set('trust proxy', 1)` is what makes req.ip the
+ * real client behind Railway's proxy rather than the proxy itself.
+ *
+ * The default memory store is per-process; more than one instance would need a
+ * shared store to share counters.
+ */
+export const globalLimiter = rateLimit({
+  ...shared,
+  windowMs: FIFTEEN_MINUTES,
+  limit: 200,
+});
+
+/**
+ * Login is keyed on IP + email so one attacker cannot lock out an account by
+ * hammering it, and one NAT'd office does not share a five-attempt budget.
+ *
+ * ipKeyGenerator normalises IPv6 into a subnet; a raw req.ip would give every
+ * request from an IPv6 client a different key and no limit at all.
+ */
+export const loginLimiter = rateLimit({
+  ...shared,
+  windowMs: FIFTEEN_MINUTES,
+  limit: 5,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req: Request): string => {
+    const email = typeof req.body?.email === 'string' ? req.body.email.toLowerCase() : '';
+    return `${ipKeyGenerator(req.ip ?? '')}:${email}`;
+  },
+});
