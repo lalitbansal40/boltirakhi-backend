@@ -4,6 +4,9 @@
 declare global {
   namespace Express {
     interface Request {
+      /** Set by `requireAuth`. Only the id and role — everything else goes stale. */
+      user?: { id: string; role: 'customer' | 'admin' };
+
       /**
        * Output of `validate({ query })`.
        *
