@@ -15,3 +15,16 @@ export {
   type OrderStatus,
   type PaymentStatus,
 } from './Order';
+export {
+  BoltiMessage,
+  generateBoltiToken,
+  type IBoltiMessage,
+  type IBoltiPhoto,
+  type BoltiStatus,
+} from './BoltiMessage';
+export {
+  OtpSession,
+  MAX_OTP_ATTEMPTS,
+  type IOtpSession,
+  type OtpChannel,
+} from './OtpSession';
