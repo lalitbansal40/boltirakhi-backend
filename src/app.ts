@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import { env, isProduction } from './config/env';
 import { notFound } from './middleware/notFound';
 import { errorHandler } from './middleware/error';
+import { sendSuccess } from './utils';
 
 const DB_STATE: Record<number, string> = {
   0: 'disconnected',
@@ -51,9 +52,9 @@ export function createApp(): Application {
   app.get('/api/health', (_req: Request, res: Response) => {
     const state = mongoose.connection.readyState;
 
-    res.status(state === 1 ? 200 : 503).json({
-      success: true,
-      data: {
+    sendSuccess(
+      res,
+      {
         ok: state === 1,
         db: DB_STATE[state] ?? 'unknown',
         database: mongoose.connection.name || null,
@@ -61,7 +62,10 @@ export function createApp(): Application {
         uptime: Math.round(process.uptime()),
         timestamp: new Date().toISOString(),
       },
-    });
+      undefined,
+      // 503 when the DB is gone, so a platform health check actually fails.
+      state === 1 ? 200 : 503,
+    );
   });
 
   // Routes go here (Phase C).
