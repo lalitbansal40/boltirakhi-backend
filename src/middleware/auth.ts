@@ -23,7 +23,9 @@ export const requireAuth: RequestHandler = asyncHandler(
     // both to 401 with a specific code.
     const payload = verifyToken(token);
 
-    const user = await User.findById(payload.sub).select('_id role isBlocked');
+    const user = await User.findById(payload.sub).select(
+      '_id role isBlocked passwordChangedAt',
+    );
 
     if (!user) {
       throw ApiError.unauthorized('Account no longer exists');
@@ -31,6 +33,19 @@ export const requireAuth: RequestHandler = asyncHandler(
 
     if (user.isBlocked) {
       throw new ApiError(403, 'This account has been blocked', 'USER_BLOCKED');
+    }
+
+    // A JWT cannot be recalled, so a password change has to invalidate the
+    // tokens that predate it — otherwise changing a leaked password leaves the
+    // attacker signed in until expiry.
+    //
+    // iat is in seconds; the 1s slack covers a token minted in the same second
+    // the password was written.
+    if (user.passwordChangedAt && payload.iat) {
+      const issuedAtMs = payload.iat * 1000;
+      if (issuedAtMs < user.passwordChangedAt.getTime() - 1000) {
+        throw new ApiError(401, 'Password was changed, please sign in again', 'TOKEN_STALE');
+      }
     }
 
     req.user = { id: String(user._id), role: user.role };

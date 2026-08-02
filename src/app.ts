@@ -9,6 +9,7 @@ import { errorHandler } from './middleware/error';
 import { globalLimiter } from './middleware/rateLimit';
 import { sanitizeRequest } from './middleware/sanitize';
 import { sendSuccess } from './utils';
+import authRoutes from './modules/auth/auth.routes';
 
 const DB_STATE: Record<number, string> = {
   0: 'disconnected',
@@ -77,7 +78,8 @@ export function createApp(): Application {
 
   app.use('/api', globalLimiter);
 
-  // Routes go here (Phase C).
+  app.use('/api/admin/auth', authRoutes);
+  // More admin modules mount here (Phase C.2 onwards).
 
   app.use(notFound);
   app.use(errorHandler);

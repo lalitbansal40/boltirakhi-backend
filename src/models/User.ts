@@ -22,6 +22,7 @@ export interface IUser extends Document<Types.ObjectId> {
   phone?: string;
   email?: string;
   passwordHash?: string;
+  passwordChangedAt?: Date;
   role: UserRole;
   addresses: Types.DocumentArray<IAddress>;
   isBlocked: boolean;
@@ -82,6 +83,11 @@ const userSchema = new Schema<IUser>(
     // Never returned by a plain query, so it cannot leak through a controller
     // that forgets to project it away.
     passwordHash: { type: String, select: false },
+
+    // JWTs cannot be recalled. requireAuth rejects any token issued before
+    // this, so changing the password after a leak actually ends the
+    // attacker's session instead of leaving it live until expiry.
+    passwordChangedAt: { type: Date },
 
     role: { type: String, enum: ['customer', 'admin'], default: 'customer', index: true },
     addresses: { type: [addressSchema], default: [] },

@@ -6,6 +6,8 @@ export type TokenRole = 'customer' | 'admin';
 export interface TokenPayload {
   sub: string;
   role: TokenRole;
+  /** Issued-at, in SECONDS (jwt's unit, not JS milliseconds). */
+  iat?: number;
 }
 
 /**
@@ -34,7 +36,11 @@ export function verifyToken(token: string): TokenPayload {
     throw new jwt.JsonWebTokenError('Malformed token payload');
   }
 
-  return { sub: decoded.sub, role: (decoded as { role: TokenRole }).role };
+  return {
+    sub: decoded.sub,
+    role: (decoded as { role: TokenRole }).role,
+    iat: decoded.iat,
+  };
 }
 
 /** Reads `Authorization: Bearer <token>`; null when the header is absent or malformed. */
