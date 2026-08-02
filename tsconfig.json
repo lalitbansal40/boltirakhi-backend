@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    // node16 emits CommonJS because package.json has "type": "commonjs".
+    // TypeScript 7 removed the legacy "node"/node10 resolution mode.
+    "module": "node16",
+    "moduleResolution": "node16",
     "lib": ["ES2022"],
 
     "rootDir": "./src",
