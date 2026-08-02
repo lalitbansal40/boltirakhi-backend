@@ -34,9 +34,10 @@
   },
   "homepage": "https://github.com/lalitbansal40/boltirakhi-backend#readme",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1101.0",
+    "@aws-sdk/s3-request-presigner": "^3.1101.0",
     "axios": "^1.19.0",
     "bcryptjs": "^3.0.3",
-    "cloudinary": "^2.10.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.22.2",

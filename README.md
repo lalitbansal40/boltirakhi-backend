@@ -16,7 +16,11 @@ Requires **Node >= 20**.
 | Service | What you need |
 |---|---|
 | MongoDB Atlas | Connection string — must include `/boltirakhi` as the DB name |
-| Cloudinary | `cloud_name`, `api_key`, `api_secret` |
+| AWS S3 | Bucket in `ap-south-1`, plus an IAM user's access key / secret |
+
+S3 layout: `products/` and `categories/` are public-read via bucket policy so
+storefront URLs stay stable; `bolti/` stays private and is served through
+short-lived signed URLs, since those are personal family videos.
 
 Generate a JWT secret:
 ```bash

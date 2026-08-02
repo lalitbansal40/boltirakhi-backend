@@ -3,7 +3,7 @@ import type { Server } from 'http';
 // else initialises.
 import { env } from './config/env';
 import { connectDB, disconnectDB } from './config/db';
-import { verifyCloudinary } from './config/cloudinary';
+import { verifyS3 } from './config/s3';
 import { createApp } from './app';
 
 let server: Server | undefined;
@@ -42,7 +42,7 @@ export async function start(): Promise<void> {
   await connectDB();
 
   // Reports but does not block — uploads are not needed until Phase C.3.
-  await verifyCloudinary();
+  await verifyS3();
 
   const app = createApp();
 

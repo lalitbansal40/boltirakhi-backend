@@ -57,13 +57,21 @@ const envSchema = z.object({
   // ---- CORS ----
   CORS_ORIGINS: commaSeparated,
 
-  // ---- Cloudinary ----
+  // ---- AWS S3 ----
   // Optional until the upload endpoints exist (Phase C.3). Requiring them
   // earlier only blocks boot for a feature nothing calls yet — same treatment
-  // as Razorpay/Shiprocket below. `isCloudinaryConfigured` guards actual use.
-  CLOUDINARY_CLOUD_NAME: z.string().optional(),
-  CLOUDINARY_API_KEY: z.string().optional(),
-  CLOUDINARY_API_SECRET: z.string().optional(),
+  // as Razorpay/Shiprocket below. `isS3Configured` guards actual use.
+  AWS_REGION: z.string().default('ap-south-1'),
+  AWS_S3_BUCKET: z.string().optional(),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  // CloudFront domain, once one exists. Serving straight from the bucket works
+  // but is slower and bills full S3 egress.
+  AWS_CDN_DOMAIN: z
+    .string()
+    .refine((value) => /^https?:\/\//i.test(value), 'must start with http:// or https://')
+    .transform((value) => value.replace(/\/+$/, ''))
+    .optional(),
 
   // ---- Razorpay (Phase 2) ----
   RAZORPAY_KEY_ID: z.string().optional(),
@@ -109,6 +117,6 @@ export const isProduction = env.NODE_ENV === 'production';
 export const isDevelopment = env.NODE_ENV === 'development';
 
 /** Upload routes must refuse to run rather than fail mid-upload. */
-export const isCloudinaryConfigured = Boolean(
-  env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET,
+export const isS3Configured = Boolean(
+  env.AWS_S3_BUCKET && env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY,
 );
