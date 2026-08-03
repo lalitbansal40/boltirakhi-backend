@@ -14,6 +14,8 @@ import categoryRoutes from './modules/category/category.routes';
 import productRoutes from './modules/product/product.routes';
 import uploadRoutes from './modules/upload/upload.routes';
 import orderRoutes from './modules/order/order.routes';
+import userRoutes from './modules/user/user.routes';
+import dashboardRoutes from './modules/dashboard/dashboard.routes';
 
 const DB_STATE: Record<number, string> = {
   0: 'disconnected',
@@ -87,6 +89,8 @@ export function createApp(): Application {
   app.use('/api/admin/products', productRoutes);
   app.use('/api/admin/uploads', uploadRoutes);
   app.use('/api/admin/orders', orderRoutes);
+  app.use('/api/admin/users', userRoutes);
+  app.use('/api/admin/dashboard', dashboardRoutes);
   // More admin modules mount here (Phase C.5 onwards).
 
   app.use(notFound);
