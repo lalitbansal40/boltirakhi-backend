@@ -12,12 +12,29 @@ const imageSchema = z.object({
   alt: z.string().max(160).optional(),
 });
 
+/**
+ * Shared with products.
+ *
+ * The limits match what Google actually shows — it truncates the title around
+ * 70 characters and the description around 160, so anything longer is written
+ * but never read. There is no `metaKeywords`: that tag has been ignored since
+ * 2009.
+ *
+ * The model lower-cases, trims and de-duplicates tags; zod only bounds them.
+ */
+export const seoSchemaFields = {
+  metaTitle: z.string().trim().max(70).optional(),
+  metaDescription: z.string().trim().max(160).optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(15).optional(),
+};
+
 export const createCategorySchema = z.object({
   name: z.string().trim().min(2, 'must be at least 2 characters').max(80),
   image: imageSchema.optional(),
   description: z.string().trim().max(500).optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
+  ...seoSchemaFields,
 });
 
 /**

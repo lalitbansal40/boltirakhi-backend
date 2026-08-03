@@ -7,7 +7,14 @@ export interface IStoredImage {
   alt?: string;
 }
 
-export interface ICategory extends Document<Types.ObjectId> {
+/** Shared by Category and Product — see `seoFields`. */
+export interface ISeoFields {
+  metaTitle?: string;
+  metaDescription?: string;
+  tags: string[];
+}
+
+export interface ICategory extends Document<Types.ObjectId>, ISeoFields {
   name: string;
   slug: string;
   image?: IStoredImage;
@@ -17,6 +24,55 @@ export interface ICategory extends Document<Types.ObjectId> {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export const META_TITLE_MAX = 70;
+export const META_DESCRIPTION_MAX = 160;
+export const TAG_MAX_LENGTH = 40;
+export const TAGS_MAX = 15;
+
+/**
+ * Lower-cases, trims, drops blanks and de-duplicates.
+ *
+ * Done in the model rather than the form because "Bhaiya Bhabhi" and
+ * "bhaiya bhabhi" arriving as two tags would quietly split one /tag page into
+ * two half-filled ones, and nothing would report it.
+ */
+function normaliseTags(value: unknown): unknown {
+  if (!Array.isArray(value)) return value; // let the type cast fail loudly
+  const cleaned = value.map((tag) => String(tag).trim().toLowerCase()).filter(Boolean);
+  return [...new Set(cleaned)];
+}
+
+/**
+ * SEO fields, shared by Category and Product.
+ *
+ * There is deliberately no `metaKeywords`: Google stopped reading that tag in
+ * 2009, so filling it in would be pure wasted effort. `tags` exists for
+ * browsable /tag/<name> pages and related-product lookups — those pages are the
+ * thing that actually gets indexed.
+ *
+ * All three are optional. Products entered before this field existed have to
+ * keep saving untouched, and the public site falls back to title/description.
+ */
+export const seoFields = {
+  metaTitle: { type: String, trim: true, maxlength: META_TITLE_MAX },
+  metaDescription: { type: String, trim: true, maxlength: META_DESCRIPTION_MAX },
+  tags: {
+    type: [String],
+    default: (): string[] => [],
+    set: normaliseTags,
+    validate: [
+      {
+        validator: (tags: string[]) => tags.length <= TAGS_MAX,
+        message: `at most ${TAGS_MAX} tags`,
+      },
+      {
+        validator: (tags: string[]) => tags.every((tag) => tag.length <= TAG_MAX_LENGTH),
+        message: `each tag must be ${TAG_MAX_LENGTH} characters or less`,
+      },
+    ],
+  },
+};
 
 /**
  * `key` is the S3 object key; `url` is safe to persist only because
@@ -40,6 +96,7 @@ const categorySchema = new Schema<ICategory>(
     description: { type: String, trim: true, maxlength: 500 },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
+    ...seoFields,
   },
   {
     timestamps: true,
@@ -54,6 +111,7 @@ const categorySchema = new Schema<ICategory>(
 
 // The public listing: active categories in display order.
 categorySchema.index({ isActive: 1, sortOrder: 1 });
+categorySchema.index({ tags: 1 });
 
 /**
  * Fills the slug once, on creation, and never again.

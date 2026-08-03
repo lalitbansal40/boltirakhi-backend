@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { objectIdSchema } from '../category/category.schema';
+import { objectIdSchema, seoSchemaFields } from '../category/category.schema';
 
 export const idParamSchema = z.object({ id: objectIdSchema });
 
@@ -44,6 +44,7 @@ const productFields = z
     isActive: z.boolean().optional(),
     isFeatured: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
+    ...seoSchemaFields,
   });
 
 // Also enforced by the model; checking here turns it into a clean field-level

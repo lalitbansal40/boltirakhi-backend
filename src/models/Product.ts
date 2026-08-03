@@ -1,6 +1,6 @@
 import { Schema, model, type Document, type Model, type Types } from 'mongoose';
 import { slugifyOrFallback, uniqueSlug } from '../utils/slugify';
-import { storedImageSchema, type IStoredImage } from './Category';
+import { seoFields, storedImageSchema, type ISeoFields, type IStoredImage } from './Category';
 
 export type ProductType = 'normal' | 'bolti';
 
@@ -10,7 +10,7 @@ export interface IDimensionsCm {
   h: number;
 }
 
-export interface IProduct extends Document<Types.ObjectId> {
+export interface IProduct extends Document<Types.ObjectId>, ISeoFields {
   title: string;
   slug: string;
   description: string;
@@ -88,6 +88,7 @@ const productSchema = new Schema<IProduct>(
     isActive: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
     sortOrder: { type: Number, default: 0 },
+    ...seoFields,
   },
   {
     timestamps: true,
@@ -106,6 +107,7 @@ const productSchema = new Schema<IProduct>(
 productSchema.index({ categoryId: 1, isActive: 1 }); // category page
 productSchema.index({ isFeatured: 1, isActive: 1 }); // homepage
 productSchema.index({ isActive: 1, createdAt: -1 }); // admin list default sort
+productSchema.index({ tags: 1 }); // /tag/<name> pages on the public site
 
 // A collection may hold only one text index, so any future searchable field has
 // to be folded in here rather than added alongside.
