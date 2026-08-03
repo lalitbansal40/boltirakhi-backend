@@ -43,6 +43,20 @@ export const globalLimiter = rateLimit({
  * ipKeyGenerator normalises IPv6 into a subnet; a raw req.ip would give every
  * request from an IPv6 client a different key and no limit at all.
  */
+/**
+ * The public reveal page.
+ *
+ * The token is the only thing protecting a family's private video, so this is
+ * the one endpoint where guessing is worth attempting. The global 200/15min is
+ * far too generous for that; 30 keeps a real brother comfortable — he opens
+ * the link a handful of times — while making enumeration pointless.
+ */
+export const revealLimiter = rateLimit({
+  ...shared,
+  windowMs: FIFTEEN_MINUTES,
+  limit: 30,
+});
+
 export const loginLimiter = rateLimit({
   ...shared,
   windowMs: FIFTEEN_MINUTES,

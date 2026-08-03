@@ -16,6 +16,7 @@ import uploadRoutes from './modules/upload/upload.routes';
 import orderRoutes from './modules/order/order.routes';
 import userRoutes from './modules/user/user.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
+import { boltiRoutes, revealRoutes } from './modules/bolti/bolti.routes';
 
 const DB_STATE: Record<number, string> = {
   0: 'disconnected',
@@ -91,6 +92,10 @@ export function createApp(): Application {
   app.use('/api/admin/orders', orderRoutes);
   app.use('/api/admin/users', userRoutes);
   app.use('/api/admin/dashboard', dashboardRoutes);
+  app.use('/api/admin/bolti', boltiRoutes);
+
+  // Public: the brother scans a QR and arrives here with no account.
+  app.use('/api/r', revealRoutes);
   // More admin modules mount here (Phase C.5 onwards).
 
   app.use(notFound);
