@@ -32,15 +32,40 @@ export async function createForOrderItem(params: {
   // The link lives on the order item, not the order — one order can carry two
   // bolti rakhis with two different videos.
   const existing = await BoltiMessage.findOne({ orderItemId: params.orderItemId });
-  if (existing) return existing;
+  if (existing) {
+    await linkToOrderItem(params.orderId, params.orderItemId, existing._id);
+    return existing;
+  }
 
   // token and revealUrl are filled in by the model.
-  return BoltiMessage.create({
+  const message = await BoltiMessage.create({
     orderId: params.orderId,
     orderItemId: params.orderItemId,
     userId: params.userId,
     status: 'draft',
   });
+
+  await linkToOrderItem(params.orderId, params.orderItemId, message._id);
+  return message;
+}
+
+/**
+ * Writes the id back onto the order item.
+ *
+ * The reference has to exist in both directions: the message knows its item so
+ * it can be found from a webhook, and the item knows its message so the order
+ * detail can load them without a second collection scan. Setting only one side
+ * leaves the order screen showing no messages at all.
+ */
+async function linkToOrderItem(
+  orderId: Types.ObjectId | string,
+  orderItemId: Types.ObjectId | string,
+  boltiMessageId: Types.ObjectId,
+): Promise<void> {
+  await Order.updateOne(
+    { _id: orderId, 'items._id': orderItemId },
+    { $set: { 'items.$.boltiMessageId': boltiMessageId } },
+  );
 }
 
 export interface AttachMediaInput {
