@@ -12,6 +12,7 @@ import { sendSuccess } from './utils';
 import authRoutes from './modules/auth/auth.routes';
 import categoryRoutes from './modules/category/category.routes';
 import productRoutes from './modules/product/product.routes';
+import uploadRoutes from './modules/upload/upload.routes';
 
 const DB_STATE: Record<number, string> = {
   0: 'disconnected',
@@ -83,6 +84,7 @@ export function createApp(): Application {
   app.use('/api/admin/auth', authRoutes);
   app.use('/api/admin/categories', categoryRoutes);
   app.use('/api/admin/products', productRoutes);
+  app.use('/api/admin/uploads', uploadRoutes);
   // More admin modules mount here (Phase C.5 onwards).
 
   app.use(notFound);
