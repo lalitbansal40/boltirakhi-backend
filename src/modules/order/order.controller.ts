@@ -27,6 +27,11 @@ export const cancel = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, order, 'Order cancelled');
 });
 
+export const updateShipping = asyncHandler(async (req: Request, res: Response) => {
+  const order = await orderService.updateShipping(req.params.id!, req.body);
+  sendSuccess(res, order, 'Shipping details updated');
+});
+
 /** Streams as a download rather than going through the JSON envelope. */
 export const exportCsv = asyncHandler(async (req: Request, res: Response) => {
   const csv = await orderService.exportCsv(req.validatedQuery as ExportOrderQuery);

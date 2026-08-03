@@ -64,8 +64,27 @@ export const cancelOrderSchema = z.object({
   reason: z.string().trim().min(1, 'cannot be empty').max(500),
 });
 
+/**
+ * Manual shipping entry, for the stretch before Shiprocket (C.6) exists.
+ *
+ * The admin creates the shipment in Shiprocket's own dashboard and pastes the
+ * AWB back here. Once C.6 lands this stays useful for the cases the API
+ * cannot handle — a courier booked over the phone, say.
+ */
+export const updateShippingSchema = z
+  .object({
+    awb: z.string().trim().max(200).optional(),
+    courierName: z.string().trim().max(200).optional(),
+    trackingUrl: z.string().trim().max(200).optional(),
+    status: z.string().trim().max(200).optional(),
+  })
+  .refine((data) => Object.values(data).some((value) => value !== undefined), {
+    message: 'provide at least one shipping field',
+  });
+
 export type ListOrderQuery = z.infer<typeof listOrderQuerySchema>;
 export type ExportOrderQuery = z.infer<typeof exportOrderQuerySchema>;
 export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;
 export type AddNoteInput = z.infer<typeof addNoteSchema>;
 export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;
+export type UpdateShippingInput = z.infer<typeof updateShippingSchema>;

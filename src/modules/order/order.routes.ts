@@ -9,6 +9,7 @@ import {
   exportOrderQuerySchema,
   idParamSchema,
   listOrderQuerySchema,
+  updateShippingSchema,
   updateStatusSchema,
 } from './order.schema';
 
@@ -38,6 +39,13 @@ router.post(
   '/:id/cancel',
   validate({ params: idParamSchema, body: cancelOrderSchema }),
   orderController.cancel,
+);
+
+// Manual AWB entry until C.6 (Shiprocket) exists.
+router.patch(
+  '/:id/shipping',
+  validate({ params: idParamSchema, body: updateShippingSchema }),
+  orderController.updateShipping,
 );
 
 export default router;

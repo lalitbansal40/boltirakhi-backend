@@ -22,6 +22,7 @@ import type {
   CancelOrderInput,
   ExportOrderQuery,
   ListOrderQuery,
+  UpdateShippingInput,
   UpdateStatusInput,
 } from './order.schema';
 
@@ -240,6 +241,31 @@ export async function cancel(
     );
   }
 
+  return order;
+}
+
+/**
+ * Sets whatever shipping fields were supplied, leaving the rest alone.
+ *
+ * Deliberately dumb: no Shiprocket call, no status machine. It exists so the
+ * admin can paste an AWB from Shiprocket's own dashboard while C.6 does not
+ * exist, and the order detail has something real to show.
+ */
+export async function updateShipping(
+  id: string,
+  input: UpdateShippingInput,
+): Promise<IOrder> {
+  const order = await findOrFail(id);
+
+  for (const [field, value] of Object.entries(input)) {
+    if (value === undefined) continue;
+    // An empty string is how the form clears a field.
+    order.set(`shipping.${field}`, value === '' ? undefined : value);
+  }
+
+  order.set('shipping.lastSyncedAt', new Date());
+
+  await order.save();
   return order;
 }
 
