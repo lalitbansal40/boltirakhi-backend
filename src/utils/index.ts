@@ -12,3 +12,4 @@ export {
   type Paginated,
 } from './pagination';
 export { slugify, slugifyOrFallback, uniqueSlug } from './slugify';
+export { escapeRegex, containsRegex } from './escapeRegex';
