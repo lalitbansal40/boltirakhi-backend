@@ -28,3 +28,10 @@ export {
   type IOtpSession,
   type OtpChannel,
 } from './OtpSession';
+export {
+  Setting,
+  SETTING_DEFAULTS,
+  SLABS_MAX,
+  type ISetting,
+  type AboveTopSlab,
+} from './Setting';
