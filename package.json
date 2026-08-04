@@ -14,7 +14,8 @@
     "start": "node dist/server.js",
     "seed": "tsx src/scripts/seed.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "reindex": "tsx src/scripts/reindex-products.ts"
   },
   "repository": {
     "type": "git",

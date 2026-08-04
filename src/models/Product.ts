@@ -120,11 +120,21 @@ productSchema.index({ isFeatured: 1, isActive: 1 }); // homepage
 productSchema.index({ isActive: 1, createdAt: -1 }); // admin list default sort
 productSchema.index({ tags: 1 }); // /tag/<name> pages on the public site
 
-// A collection may hold only one text index, so any future searchable field has
-// to be folded in here rather than added alongside.
+// A collection may hold only one text index, so tags had to be folded into
+// this one rather than added alongside.
+//
+// Changing the fields here does NOT drop the old index. Mongoose tries to
+// build the new one, MongoDB refuses with 'only one text index allowed', and
+// the server carries on with neither the error nor the index visible anywhere.
+// `npm run reindex` is what actually swaps them.
 productSchema.index(
-  { title: 'text', description: 'text' },
-  { weights: { title: 10, description: 1 }, name: 'product_text' },
+  { title: 'text', description: 'text', tags: 'text' },
+  {
+    // Tags outrank description: a tag was chosen deliberately, whereas a word
+    // can land in a description by coincidence.
+    weights: { title: 10, tags: 5, description: 1 },
+    name: 'product_text_v2',
+  },
 );
 
 productSchema.path('pricePaise').validate(function (this: IProduct, value: number) {
