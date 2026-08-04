@@ -73,10 +73,24 @@ const envSchema = z.object({
     .transform((value) => value.replace(/\/+$/, ''))
     .optional(),
 
-  // ---- Razorpay (Phase 2) ----
+  // ---- Razorpay ----
+  // Not `.default('test')` on an enum of two: a typo like "Live" would then be
+  // rejected at boot, which is the right time to find out. The mode is only a
+  // label — what actually decides test vs live is which key pair is loaded —
+  // but it is the label every human reads, so it must not lie.
+  RAZORPAY_MODE: z.enum(['test', 'live']).default('test'),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+
+  // ---- Notifications ----
+  // Off by default. An OTP that silently fails to send is worse than one the
+  // developer can read in the log, so `false` prints instead of sending.
+  SMS_ENABLED: booleanish.default(false),
+  SMS_USERNAME: z.string().optional(),
+  SMS_PASSWORD: z.string().optional(),
+  EMAIL_ENABLED: booleanish.default(false),
+  WHATSAPP_ENABLED: booleanish.default(false),
 
   // ---- Shiprocket (Phase C.6) ----
   SHIPROCKET_EMAIL: z.string().optional(),

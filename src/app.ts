@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
 import { env, isProduction } from './config/env';
+import { paymentStatus } from './config/payment';
+import { enabledChannels } from './services/notify';
 import { notFound } from './middleware/notFound';
 import { errorHandler } from './middleware/error';
 import { globalLimiter } from './middleware/rateLimit';
@@ -81,6 +83,10 @@ export function createApp(): Application {
         db: DB_STATE[state] ?? 'unknown',
         database: mongoose.connection.name || null,
         env: env.NODE_ENV,
+        // Whoever is debugging a payment needs to know which Razorpay account
+        // it landed in before they go looking for it in the wrong dashboard.
+        payments: paymentStatus(),
+        notifications: enabledChannels(),
         uptime: Math.round(process.uptime()),
         timestamp: new Date().toISOString(),
       },

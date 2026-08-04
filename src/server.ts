@@ -4,6 +4,7 @@ import type { Server } from 'http';
 import { env } from './config/env';
 import { connectDB, disconnectDB } from './config/db';
 import { verifyS3 } from './config/s3';
+import { logPaymentMode } from './config/payment';
 import { createApp } from './app';
 
 let server: Server | undefined;
@@ -55,6 +56,7 @@ export async function start(): Promise<void> {
     instance.once('listening', () => {
       console.log(`🚀 Server running on http://localhost:${env.PORT} [${env.NODE_ENV}]`);
       console.log(`   Health: http://localhost:${env.PORT}/api/health`);
+      logPaymentMode();
       resolve();
     });
 
