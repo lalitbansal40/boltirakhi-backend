@@ -25,6 +25,7 @@ import { couponRoutes, publicCouponRoutes } from './modules/coupon/coupon.routes
 import { checkoutRoutes, webhookRoutes } from './modules/checkout/checkout.routes';
 import { pricingRoutes } from './modules/pricing/pricing.routes';
 import { customerAuthRoutes } from './modules/customer-auth/customer-auth.routes';
+import { accountRoutes } from './modules/account/account.routes';
 import {
   publicCategoryRoutes,
   publicProductRoutes,
@@ -149,6 +150,8 @@ export function createApp(): Application {
   // Public: the cart prices itself before anyone has logged in.
   app.use('/api/cart', pricingRoutes);
   app.use('/api/orders', checkoutRoutes);
+  // The customer's own account: saved addresses. Not /api/users, which is admin.
+  app.use('/api/account', accountRoutes);
   // Public: the storefront catalogue, browsed before any account exists.
   app.use('/api/categories', publicCategoryRoutes);
   app.use('/api/products', publicProductRoutes);
