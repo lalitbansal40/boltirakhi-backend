@@ -26,11 +26,19 @@ echo "==> Ab: $(git rev-parse --short HEAD)"
 
 # `npm ci`, `npm install` nahi — lockfile se bilkul wahi versions aayenge
 # jo test hue the. `install` chupchaap minor version badal deta hai.
+#
+# dev dependencies bhi chahiye: build `tsc` se hota hai aur wo unhi me hai.
+# `--omit=dev` yahan nahi lagana — wo fail nahi hota, bas typescript chhod
+# deta hai, aur agla step "tsc: not found" par mar jaata hai.
 echo "==> Dependencies"
-npm ci --omit=dev --ignore-scripts=false || npm ci
+npm ci
 
 echo "==> Build"
 npm run build
+
+# Build ho chuka, ab dev dependencies ki zaroorat nahi — RAM aur disk khaali.
+echo "==> Dev dependencies hata rahe hain"
+npm prune --omit=dev
 
 # Build ke baad hi restart — pehle karoge to purani dist chalti rahegi aur
 # lagega deploy ka koi asar nahi hua.
