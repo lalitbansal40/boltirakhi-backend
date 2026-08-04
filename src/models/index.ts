@@ -35,3 +35,4 @@ export {
   type ISetting,
   type AboveTopSlab,
 } from './Setting';
+export { Coupon, MAX_PERCENT, type ICoupon, type CouponType } from './Coupon';

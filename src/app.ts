@@ -18,6 +18,7 @@ import userRoutes from './modules/user/user.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import { boltiRoutes, revealRoutes } from './modules/bolti/bolti.routes';
 import { settingRoutes } from './modules/setting/setting.routes';
+import { couponRoutes, publicCouponRoutes } from './modules/coupon/coupon.routes';
 
 const DB_STATE: Record<number, string> = {
   0: 'disconnected',
@@ -95,9 +96,12 @@ export function createApp(): Application {
   app.use('/api/admin/dashboard', dashboardRoutes);
   app.use('/api/admin/bolti', boltiRoutes);
   app.use('/api/admin/settings', settingRoutes);
+  app.use('/api/admin/coupons', couponRoutes);
 
   // Public: the brother scans a QR and arrives here with no account.
   app.use('/api/r', revealRoutes);
+  // Public: the checkout checks a coupon before an account exists.
+  app.use('/api/coupons', publicCouponRoutes);
   // More admin modules mount here (Phase C.5 onwards).
 
   app.use(notFound);

@@ -67,3 +67,17 @@ export const loginLimiter = rateLimit({
     return `${ipKeyGenerator(req.ip ?? '')}:${email}`;
   },
 });
+
+/**
+ * Coupon codes are short and guessable — SAVE10, SAVE20, RAKHI50 — and the
+ * validate endpoint is public, so without a limit it becomes a free oracle for
+ * discovering every live discount.
+ *
+ * 30 in fifteen minutes is far more than a real shopper needs; they try one
+ * code, maybe two.
+ */
+export const couponLimiter = rateLimit({
+  ...shared,
+  windowMs: FIFTEEN_MINUTES,
+  limit: 30,
+});
