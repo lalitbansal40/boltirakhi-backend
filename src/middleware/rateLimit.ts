@@ -81,3 +81,17 @@ export const couponLimiter = rateLimit({
   windowMs: FIFTEEN_MINUTES,
   limit: 30,
 });
+
+/**
+ * The storefront catalogue.
+ *
+ * Far more generous than the reveal or coupon limits: one shopper browsing a
+ * category and opening a few products fires twenty or thirty requests in a
+ * couple of minutes. A 30-per-window cap here would lock out the customers it
+ * was meant to protect.
+ */
+export const catalogLimiter = rateLimit({
+  ...shared,
+  windowMs: FIFTEEN_MINUTES,
+  limit: 120,
+});
