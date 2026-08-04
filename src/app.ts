@@ -22,6 +22,7 @@ import { boltiRoutes, revealRoutes } from './modules/bolti/bolti.routes';
 import { settingRoutes } from './modules/setting/setting.routes';
 import { couponRoutes, publicCouponRoutes } from './modules/coupon/coupon.routes';
 import { checkoutRoutes, webhookRoutes } from './modules/checkout/checkout.routes';
+import { pricingRoutes } from './modules/pricing/pricing.routes';
 import {
   publicCategoryRoutes,
   publicProductRoutes,
@@ -138,6 +139,8 @@ export function createApp(): Application {
   app.use('/api/r', revealRoutes);
   // Public: the checkout checks a coupon before an account exists.
   app.use('/api/coupons', publicCouponRoutes);
+  // Public: the cart prices itself before anyone has logged in.
+  app.use('/api/cart', pricingRoutes);
   app.use('/api/orders', checkoutRoutes);
   // Public: the storefront catalogue, browsed before any account exists.
   app.use('/api/categories', publicCategoryRoutes);

@@ -2,10 +2,11 @@ import { Types } from 'mongoose';
 
 import { Order, type IOrder } from '../../models/Order';
 import { Product } from '../../models/Product';
-import { getSettings } from '../setting/setting.service';
-import { applyCoupon, incrementUsage } from '../coupon/coupon.service';
+import { incrementUsage } from '../coupon/coupon.service';
+// The single source of truth for what a cart costs. The cart screen calls the
+// same function, which is the only way the two can be guaranteed to agree.
+import { priceCart } from '../pricing/pricing.service';
 import { createRazorpayOrder, verifyPaymentSignature } from '../../services/razorpay';
-import { deliveryChargePaise } from '../../utils/shipping';
 import { nextOrderNumberWithRetry } from '../../utils/orderNumber';
 import { ApiError } from '../../utils/ApiError';
 import { notify } from '../../services/notify';
@@ -24,116 +25,6 @@ import type { CreateOrderInput, VerifyPaymentInput } from './checkout.schema';
  */
 
 /**
- * What the courier would charge.
- *
- * Shiprocket is not wired up yet, so there is no quote to pass in. Zero makes
- * `pickSlab` round up to the lowest slab, i.e. we charge the base rate and
- * absorb anything above it. That is the safe direction to be wrong in: the
- * customer is never overcharged for a guess, and it matches the decision that
- * whatever we do not collect, we pay.
- */
-const UNKNOWN_COURIER_QUOTE_PAISE = 0;
-
-interface PricedCart {
-  items: IOrder['items'];
-  subtotalPaise: number;
-  shippingPaise: number;
-  discountPaise: number;
-  totalPaise: number;
-  couponId?: Types.ObjectId;
-  hasBolti: boolean;
-}
-
-/**
- * Turn a list of ids and quantities into money.
- *
- * Every product is re-read here. A price the browser sent, or a price it saw
- * ten minutes ago, is not the price that gets charged.
- */
-async function priceCart(input: CreateOrderInput): Promise<PricedCart> {
-  const ids = input.items.map((item) => new Types.ObjectId(item.productId));
-  const products = await Product.find({ _id: { $in: ids }, isActive: true });
-
-  const byId = new Map(products.map((product) => [String(product._id), product]));
-
-  const items = input.items.map((line) => {
-    const product = byId.get(line.productId);
-
-    // Inactive and deleted look the same to a customer, and should: naming
-    // which one it was tells them nothing useful.
-    if (!product) {
-      throw new ApiError(400, 'One of the items is no longer available', 'ITEM_UNAVAILABLE');
-    }
-
-    if (product.stock < line.qty) {
-      throw new ApiError(
-        409,
-        `Only ${product.stock} left of ${product.title}`,
-        'INSUFFICIENT_STOCK',
-      );
-    }
-
-    return {
-      productId: product._id,
-      title: product.title,
-      slug: product.slug,
-      image: product.images?.[0]?.url,
-      // `pricePaise` is what is actually charged; `mrpPaise` is only the
-      // struck-through number next to it. Charging the MRP would overcharge
-      // every discounted product in the shop.
-      pricePaise: product.pricePaise,
-      qty: line.qty,
-      type: product.type,
-      boltiMessageId: line.boltiMessageId
-        ? new Types.ObjectId(line.boltiMessageId)
-        : undefined,
-    };
-  });
-
-  const subtotalPaise = items.reduce((sum, item) => sum + item.pricePaise * item.qty, 0);
-
-  const settings = await getSettings();
-
-  /**
-   * Shipping is decided on the subtotal *before* discount — a settled
-   * decision. Free delivery promised at Rs 499 stays free when a coupon takes
-   * the cart to Rs 450; taking the delivery charge back after showing "free
-   * delivery" is how a customer decides not to finish.
-   */
-  const shippingPaise = deliveryChargePaise({
-    subtotalPaise,
-    actualPaise: UNKNOWN_COURIER_QUOTE_PAISE,
-    freeDeliveryAbovePaise: settings.freeDeliveryAbovePaise,
-    slabs: settings.shippingSlabsPaise,
-    aboveTopSlab: settings.aboveTopSlab,
-  });
-
-  let discountPaise = 0;
-  let couponId: Types.ObjectId | undefined;
-
-  if (input.couponCode) {
-    // applyCoupon takes no shipping argument by design — the discount is on
-    // goods only, and a function that cannot see the delivery charge cannot
-    // accidentally discount it.
-    const applied = await applyCoupon(input.couponCode, subtotalPaise);
-    discountPaise = applied.discountPaise;
-    couponId = applied.coupon._id as Types.ObjectId;
-  }
-
-  const totalPaise = subtotalPaise + shippingPaise - discountPaise;
-
-  return {
-    items: items as unknown as IOrder['items'],
-    subtotalPaise,
-    shippingPaise,
-    discountPaise,
-    totalPaise,
-    couponId,
-    hasBolti: items.some((item) => item.type === 'bolti'),
-  };
-}
-
-/**
  * Create an order and the Razorpay order that will pay for it.
  *
  * The row is written first, so a payment that succeeds always has somewhere to
@@ -141,14 +32,18 @@ async function priceCart(input: CreateOrderInput): Promise<PricedCart> {
  * order is a customer whose money vanished.
  */
 export async function createOrder(userId: string, input: CreateOrderInput) {
-  const cart = await priceCart(input);
+  // strict: at checkout a missing or short-stocked item stops everything. The
+  // cart screen passes false, where the same problem is only marked on the line.
+  const cart = await priceCart({ ...input, strict: true });
 
   const orderNumber = await nextOrderNumberWithRetry();
 
   const order = await Order.create({
     orderNumber,
     userId: new Types.ObjectId(userId),
-    items: cart.items,
+    // In strict mode no line can carry an `issue`, so every line here is
+    // payable and goes onto the order as-is.
+    items: cart.lines,
     amount: {
       subtotalPaise: cart.subtotalPaise,
       shippingPaise: cart.shippingPaise,

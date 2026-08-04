@@ -95,3 +95,19 @@ export const catalogLimiter = rateLimit({
   windowMs: FIFTEEN_MINUTES,
   limit: 120,
 });
+
+/**
+ * Cart re-pricing.
+ *
+ * The most-called endpoint on the site: it fires on every quantity change,
+ * every add, every coupon attempt. A shopper adjusting a few lines can send a
+ * dozen requests inside a minute quite innocently.
+ *
+ * Generous on purpose — the request is cheap, and a rate-limited cart shows a
+ * stale total, which is the one thing this whole endpoint exists to prevent.
+ */
+export const cartLimiter = rateLimit({
+  ...shared,
+  windowMs: FIFTEEN_MINUTES,
+  limit: 300,
+});
