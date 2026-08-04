@@ -49,6 +49,14 @@ export interface IOrder extends Document<Types.ObjectId> {
   shippingAddress: IOrderAddress;
   isInternational: boolean;
   hasBolti: boolean;
+  /**
+   * Which coupon was used, if any.
+   *
+   * Kept so `usedCount` can be incremented exactly once when payment lands,
+   * and so a discount on an old order can still be traced back to the code
+   * that caused it after that code has been edited or switched off.
+   */
+  couponId?: Types.ObjectId;
   payment: {
     provider: string;
     orderId?: string;
@@ -137,6 +145,7 @@ const orderSchema = new Schema<IOrder>(
     // virtual can be neither queried nor indexed.
     isInternational: { type: Boolean, default: false },
     hasBolti: { type: Boolean, default: false },
+    couponId: { type: Schema.Types.ObjectId, ref: 'Coupon' },
 
     payment: {
       provider: { type: String, default: 'razorpay' },

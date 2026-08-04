@@ -21,6 +21,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import { boltiRoutes, revealRoutes } from './modules/bolti/bolti.routes';
 import { settingRoutes } from './modules/setting/setting.routes';
 import { couponRoutes, publicCouponRoutes } from './modules/coupon/coupon.routes';
+import { checkoutRoutes, webhookRoutes } from './modules/checkout/checkout.routes';
 import {
   publicCategoryRoutes,
   publicProductRoutes,
@@ -63,7 +64,26 @@ export function createApp(): Application {
     }),
   );
 
-  app.use(express.json({ limit: '1mb' }));
+  app.use(
+    express.json({
+      limit: '1mb',
+      /**
+       * Keep the raw bytes for the Razorpay webhook only.
+       *
+       * Its signature is an HMAC over exactly what was sent, so a
+       * re-serialised `req.body` — different key order, different whitespace —
+       * hashes to something else and every webhook would be rejected.
+       *
+       * Scoped to the one path so no other request pays to hold a second copy
+       * of its body in memory.
+       */
+      verify: (req, _res, buf) => {
+        if (req.url?.startsWith('/api/webhooks/')) {
+          (req as express.Request).rawBody = buf.toString('utf8');
+        }
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   app.use(morgan(isProduction ? 'combined' : 'dev'));
@@ -96,6 +116,11 @@ export function createApp(): Application {
     );
   });
 
+  // Above the limiter, deliberately: Razorpay bursts its retries, and a 429
+  // would make it back off and eventually stop telling us a customer paid.
+  // The signature check inside is what keeps this route safe without auth.
+  app.use('/api/webhooks', webhookRoutes);
+
   app.use('/api', globalLimiter);
 
   app.use('/api/admin/auth', authRoutes);
@@ -113,6 +138,7 @@ export function createApp(): Application {
   app.use('/api/r', revealRoutes);
   // Public: the checkout checks a coupon before an account exists.
   app.use('/api/coupons', publicCouponRoutes);
+  app.use('/api/orders', checkoutRoutes);
   // Public: the storefront catalogue, browsed before any account exists.
   app.use('/api/categories', publicCategoryRoutes);
   app.use('/api/products', publicProductRoutes);

@@ -15,6 +15,13 @@ declare global {
        * Controllers must read this, not `req.query`, or `page` stays a string.
        */
       validatedQuery?: unknown;
+
+      /**
+       * The exact body bytes, captured by `express.json`'s verify hook for
+       * webhook paths only. Razorpay's signature is an HMAC over these, so a
+       * re-serialised `req.body` cannot be used in its place.
+       */
+      rawBody?: string;
     }
   }
 }
