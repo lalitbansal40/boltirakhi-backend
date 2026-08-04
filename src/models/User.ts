@@ -18,7 +18,8 @@ export interface IAddress {
 }
 
 export interface IUser extends Document<Types.ObjectId> {
-  name: string;
+  /** Absent for a customer until they reach checkout. See the schema below. */
+  name?: string;
   phone?: string;
   email?: string;
   passwordHash?: string;
@@ -61,7 +62,16 @@ addressSchema.path('pincode').validate(function (value: string) {
 
 const userSchema = new Schema<IUser>(
   {
-    name: { type: String, required: true, trim: true, maxlength: 100 },
+    /**
+     * Optional, unlike the name on an address.
+     *
+     * A customer arrives through an OTP and there is no name to ask for at
+     * that point. Interrupting a login to collect one loses people at the
+     * moment they were about to buy something, and it has to be collected at
+     * checkout anyway to print on the parcel. Admins come from the seed
+     * script, which supplies one.
+     */
+    name: { type: String, trim: true, maxlength: 100 },
 
     // unique + sparse on both: an admin has an email and no phone, a customer
     // has a phone and no email. Without sparse the second user with the field

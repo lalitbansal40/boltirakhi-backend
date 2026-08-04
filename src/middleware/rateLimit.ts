@@ -111,3 +111,21 @@ export const cartLimiter = rateLimit({
   windowMs: FIFTEEN_MINUTES,
   limit: 300,
 });
+
+/**
+ * OTP requests, per IP.
+ *
+ * Every one of these costs money at the SMS gateway, which makes this the one
+ * endpoint on the site where an unthrottled loop shows up on a bill rather
+ * than in a graph.
+ *
+ * This is only half the defence: a caller with a pool of addresses walks past
+ * an IP limit, while the cost of a hundred messages to one victim's number is
+ * unchanged. The per-number cap and the resend cooldown live in
+ * `otp.service.ts`, and both are needed.
+ */
+export const otpLimiter = rateLimit({
+  ...shared,
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+});

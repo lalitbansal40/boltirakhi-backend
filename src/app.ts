@@ -1,5 +1,6 @@
 import express, { type Application, type Request, type Response } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
@@ -23,6 +24,7 @@ import { settingRoutes } from './modules/setting/setting.routes';
 import { couponRoutes, publicCouponRoutes } from './modules/coupon/coupon.routes';
 import { checkoutRoutes, webhookRoutes } from './modules/checkout/checkout.routes';
 import { pricingRoutes } from './modules/pricing/pricing.routes';
+import { customerAuthRoutes } from './modules/customer-auth/customer-auth.routes';
 import {
   publicCategoryRoutes,
   publicProductRoutes,
@@ -86,6 +88,9 @@ export function createApp(): Application {
     }),
   );
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  // The storefront session arrives as an httpOnly cookie; Express does not
+  // parse cookies on its own.
+  app.use(cookieParser());
 
   app.use(morgan(isProduction ? 'combined' : 'dev'));
 
@@ -139,6 +144,8 @@ export function createApp(): Application {
   app.use('/api/r', revealRoutes);
   // Public: the checkout checks a coupon before an account exists.
   app.use('/api/coupons', publicCouponRoutes);
+  // Public: customers sign in with a one-time code, separate from admin auth.
+  app.use('/api/auth', customerAuthRoutes);
   // Public: the cart prices itself before anyone has logged in.
   app.use('/api/cart', pricingRoutes);
   app.use('/api/orders', checkoutRoutes);

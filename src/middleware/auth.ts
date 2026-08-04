@@ -2,6 +2,7 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { User } from '../models/User';
 import { ApiError, asyncHandler } from '../utils';
 import { extractBearerToken, verifyToken, type TokenRole } from '../utils/jwt';
+import { SESSION_COOKIE } from '../config/session';
 
 /**
  * Verifies the bearer token and loads the user.
@@ -13,7 +14,18 @@ import { extractBearerToken, verifyToken, type TokenRole } from '../utils/jwt';
  */
 export const requireAuth: RequestHandler = asyncHandler(
   async (req: Request, _res: Response, next: NextFunction) => {
-    const token = extractBearerToken(req.headers.authorization);
+    /**
+     * Header first, cookie second.
+     *
+     * The admin panel signs in with a bearer token and has done since the
+     * start; the storefront uses an httpOnly cookie. Checking the header first
+     * keeps the admin path byte-for-byte unchanged, so adding customer login
+     * cannot break the thing that was already working.
+     */
+    const token =
+      extractBearerToken(req.headers.authorization) ??
+      (req.cookies?.[SESSION_COOKIE] as string | undefined) ??
+      null;
 
     if (!token) {
       throw ApiError.unauthorized('Authentication required');

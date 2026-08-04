@@ -14,7 +14,12 @@ const DUMMY_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
 
 export interface SafeUser {
   id: string;
-  name: string;
+  /**
+   * Optional since customers sign in by OTP and have no name until checkout.
+   * Every admin has one — they are created by the seed script — so nothing in
+   * the admin panel is affected.
+   */
+  name?: string;
   email?: string;
   phone?: string;
   role: IUser['role'];
