@@ -1,6 +1,13 @@
 import { Schema, model, type Document, type Model, type Types } from 'mongoose';
 import { slugifyOrFallback, uniqueSlug } from '../utils/slugify';
-import { seoFields, storedImageSchema, type ISeoFields, type IStoredImage } from './Category';
+import {
+  seoFields,
+  storedImageSchema,
+  storedVideoSchema,
+  type ISeoFields,
+  type IStoredImage,
+  type IStoredVideo,
+} from './Category';
 
 export type ProductType = 'normal' | 'bolti';
 
@@ -17,6 +24,8 @@ export interface IProduct extends Document<Types.ObjectId>, ISeoFields {
   shortDescription?: string;
   categoryId: Types.ObjectId;
   images: Types.DocumentArray<IStoredImage>;
+  /** Optional — most products are stills only. */
+  video?: IStoredVideo;
   pricePaise: number;
   mrpPaise: number;
   stock: number;
@@ -62,6 +71,8 @@ const productSchema = new Schema<IProduct>(
 
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
     images: { type: [storedImageSchema], default: [] },
+    // Optional: every product entered before this existed has none.
+    video: { type: storedVideoSchema },
 
     // Money is stored as whole paise. Floats accumulate error across an order's
     // line items, and Razorpay wants paise anyway.

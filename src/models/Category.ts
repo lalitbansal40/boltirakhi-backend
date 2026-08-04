@@ -7,6 +7,36 @@ export interface IStoredImage {
   alt?: string;
 }
 
+export interface IStoredVideo {
+  key: string;
+  url: string;
+  thumbKey?: string;
+  thumbUrl?: string;
+  durationSec?: number;
+  sizeBytes?: number;
+}
+
+/**
+ * A product video.
+ *
+ * `products/` is public-read, so the URL is stored and served directly. Bolti
+ * videos are the opposite — a private prefix, signed per request, key only.
+ * Two rules for two different things; they must not be merged.
+ */
+export const storedVideoSchema = new Schema<IStoredVideo>(
+  {
+    key: { type: String, required: true, trim: true },
+    url: { type: String, required: true, trim: true },
+    thumbKey: { type: String, trim: true },
+    thumbUrl: { type: String, trim: true },
+    // Read off the browser's <video> element, so it is a hint the client
+    // supplied rather than something measured here.
+    durationSec: { type: Number, min: 0, max: 300 },
+    sizeBytes: { type: Number, min: 0 },
+  },
+  { _id: false },
+);
+
 /** Shared by Category and Product — see `seoFields`. */
 export interface ISeoFields {
   metaTitle?: string;

@@ -18,13 +18,22 @@ const MB = 1024 * 1024;
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
 
+/** No photograph needs more than this, whatever prefix it lands under. */
+const MAX_IMAGE_BYTES = 5 * MB;
+
 /**
  * What each prefix will accept. Checked before a URL is signed, because that
  * is the only moment we control: once the browser has a presigned URL it
  * uploads straight to S3 and this server never sees the bytes.
  */
 const RULES: Record<S3Prefix, { contentTypes: string[]; maxBytes: number }> = {
-  [S3_PREFIX.PRODUCTS]: { contentTypes: IMAGE_TYPES, maxBytes: 5 * MB },
+  // Products carry a gallery and, optionally, one demo video. No quicktime
+  // here: .mov matters for what a sister records on an iPhone, not for
+  // footage we shoot and convert ourselves.
+  [S3_PREFIX.PRODUCTS]: {
+    contentTypes: [...IMAGE_TYPES, 'video/mp4', 'video/webm'],
+    maxBytes: 50 * MB,
+  },
   [S3_PREFIX.CATEGORIES]: { contentTypes: IMAGE_TYPES, maxBytes: 5 * MB },
   [S3_PREFIX.BOLTI_VIDEOS]: { contentTypes: VIDEO_TYPES, maxBytes: 50 * MB },
   [S3_PREFIX.BOLTI_PHOTOS]: { contentTypes: IMAGE_TYPES, maxBytes: 5 * MB },
@@ -74,11 +83,18 @@ export function assertUploadAllowed(input: PresignInput): void {
     ]);
   }
 
-  if (input.sizeBytes > rule.maxBytes) {
+  // The products prefix takes both stills and one demo video, and 50MB is a
+  // ceiling for footage, not for a photograph. Sizing by content type rather
+  // than by prefix keeps a 6MB JPEG rejected while a 40MB mp4 goes through.
+  const maxBytes = input.contentType.startsWith('video/')
+    ? rule.maxBytes
+    : Math.min(rule.maxBytes, MAX_IMAGE_BYTES);
+
+  if (input.sizeBytes > maxBytes) {
     throw ApiError.validation([
       {
         field: 'sizeBytes',
-        message: `must be at most ${Math.round(rule.maxBytes / MB)}MB`,
+        message: `must be at most ${Math.round(maxBytes / MB)}MB`,
       },
     ]);
   }

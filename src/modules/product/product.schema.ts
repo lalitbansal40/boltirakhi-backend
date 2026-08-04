@@ -15,6 +15,16 @@ const imageSchema = z.object({
   alt: z.string().max(160).optional(),
 });
 
+const videoSchema = z.object({
+  key: z.string().min(1),
+  url: z.url(),
+  thumbKey: z.string().min(1).optional(),
+  thumbUrl: z.url().optional(),
+  // A product video is a demo, not a film.
+  durationSec: z.number().min(0).max(300).optional(),
+  sizeBytes: z.number().int().positive().optional(),
+});
+
 const dimensionsSchema = z.object({
   l: z.number().positive(),
   b: z.number().positive(),
@@ -32,6 +42,7 @@ const productFields = z
     shortDescription: z.string().trim().max(300).optional(),
     categoryId: objectIdSchema,
     images: z.array(imageSchema).optional(),
+    video: videoSchema.optional(),
     pricePaise: paise,
     mrpPaise: paise,
     stock: z.number().int().min(0),
@@ -62,6 +73,10 @@ export const createProductSchema = productFields.refine(
  */
 export const updateProductSchema = productFields
   .partial()
+  // Only an update can remove a video: `null` means take it off, `undefined`
+  // means leave it alone. On create there is nothing to remove, so allowing
+  // null there would only be a way to send a meaningless payload.
+  .extend({ video: videoSchema.nullable().optional() })
   .refine(
     (data) =>
       data.pricePaise === undefined ||

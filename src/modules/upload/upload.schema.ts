@@ -11,6 +11,10 @@ export const presignSchema = z.object({
   sizeBytes: z.number().int().positive(),
 });
 
+// Content type and size limits per prefix live in upload.service.ts, in one
+// RULES table. Duplicating them here would give two sources of truth that
+// drift apart — which is exactly what happened when they briefly did.
+
 export const readUrlSchema = z.object({
   key: z.string().trim().min(1).max(400),
   expiresIn: z.number().int().min(60).max(24 * 60 * 60).optional(),

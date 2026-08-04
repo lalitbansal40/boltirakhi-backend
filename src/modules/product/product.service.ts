@@ -72,6 +72,14 @@ export async function update(id: string, input: UpdateProductInput): Promise<IPr
 
   if (input.categoryId) await assertCategoryExists(input.categoryId);
 
+  // `video: null` means remove it. Handled before the assign because
+  // Object.assign would set the field to null and mongoose would reject that
+  // as a cast error rather than unsetting anything.
+  if (input.video === null) {
+    product.set('video', undefined);
+    delete (input as Record<string, unknown>).video;
+  }
+
   Object.assign(product, input);
   await product.save();
 

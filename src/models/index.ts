@@ -36,3 +36,4 @@ export {
   type AboveTopSlab,
 } from './Setting';
 export { Coupon, MAX_PERCENT, type ICoupon, type CouponType } from './Coupon';
+export { storedVideoSchema, type IStoredVideo } from './Category';
