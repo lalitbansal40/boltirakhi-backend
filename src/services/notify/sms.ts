@@ -75,7 +75,15 @@ export const smsSender: ChannelSender = {
       const response = await fetch(ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, mobile, message: payload.message }),
+        body: JSON.stringify({
+          username,
+          password,
+          mobile,
+          message: payload.message,
+          // Required by the gateway. Without it the message is accepted and
+          // then dropped, with every layer reporting success.
+          senderId: env.SMS_SENDER_ID,
+        }),
         signal: controller.signal,
       });
 
@@ -122,19 +130,10 @@ export const smsSender: ChannelSender = {
       }
 
       /**
-       * An empty PE ID means the message was accepted by the gateway and will
-       * be dropped by the operator: Indian transactional SMS requires DLT
-       * registration, and without it nothing is delivered while everything
-       * reports success. Worth saying out loud, because the symptom is
-       * silence.
+       * NotifyNow returns an empty resolvedPeId even for messages that are
+       * delivered, so it is not a useful signal and is deliberately not warned
+       * about — a warning on every single SMS is a log nobody reads.
        */
-      if (body?.metadata && !body.metadata.resolvedPeId) {
-        console.warn(
-          `[sms] accepted with no DLT PE ID (messageId ${body.messageId ?? 'unknown'}). ` +
-            'The operator will most likely drop this. Check the DLT template and sender ID.',
-        );
-      }
-
       return { ok: true, channel: 'sms', id: body?.messageId };
     } catch (error) {
       const aborted = error instanceof Error && error.name === 'AbortError';

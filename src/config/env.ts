@@ -89,6 +89,12 @@ const envSchema = z.object({
   SMS_ENABLED: booleanish.default(false),
   SMS_USERNAME: z.string().optional(),
   SMS_PASSWORD: z.string().optional(),
+  /**
+   * The registered sender header. NotifyNow rejects or silently drops a
+   * message without one, and the failure looks like a delivery problem rather
+   * than a missing field.
+   */
+  SMS_SENDER_ID: z.string().default("INFO"),
   EMAIL_ENABLED: booleanish.default(false),
   RESEND_API_KEY: z.string().optional(),
   // Must be an address on a domain verified with Resend, or every send is a
