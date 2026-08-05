@@ -26,6 +26,7 @@ import { checkoutRoutes, webhookRoutes } from './modules/checkout/checkout.route
 import { pricingRoutes } from './modules/pricing/pricing.routes';
 import { customerAuthRoutes } from './modules/customer-auth/customer-auth.routes';
 import { accountRoutes } from './modules/account/account.routes';
+import { boltiCustomerRoutes } from './modules/bolti/bolti.customer.routes';
 import {
   publicCategoryRoutes,
   publicProductRoutes,
@@ -152,6 +153,8 @@ export function createApp(): Application {
   app.use('/api/orders', checkoutRoutes);
   // The customer's own account: saved addresses. Not /api/users, which is admin.
   app.use('/api/account', accountRoutes);
+  // The sister recording her message. Admin bolti routes stay where they are.
+  app.use('/api/bolti', boltiCustomerRoutes);
   // Public: the storefront catalogue, browsed before any account exists.
   app.use('/api/categories', publicCategoryRoutes);
   app.use('/api/products', publicProductRoutes);
