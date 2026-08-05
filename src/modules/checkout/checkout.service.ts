@@ -106,11 +106,24 @@ async function markPaid(order: IOrder, paymentId: string, signature?: string) {
   order.statusHistory.push({ status: 'paid', at: new Date() });
   await order.save();
 
-  // Fire and forget: notify() never throws, and a confirmation SMS that fails
-  // must not undo a payment that succeeded.
+  /**
+   * Fire and forget: notify() never throws, and a confirmation SMS that fails
+   * must not undo a payment that succeeded.
+   *
+   * No link in the message. A payment SMS carrying a URL is exactly what a
+   * phishing SMS looks like, and teaching customers to tap links in messages
+   * about their money is a habit worth not starting. The order number is
+   * enough to find it on the site.
+   */
+  // Paise are the unit everywhere else; this is the one place the backend
+  // converts, because a person is about to read it. Rounded, not truncated —
+  // the total is always whole rupees in practice, and a stray paisa in an SMS
+  // reads as a mistake.
+  const rupees = Math.round(order.amount.totalPaise / 100);
+
   void notify('sms', {
     to: order.shippingAddress.phone,
-    message: `Your Bolti Rakhi order ${order.orderNumber} is confirmed. We will let you know when it ships.`,
+    message: `Order ${order.orderNumber} confirmed. Rs ${rupees} paid. We will send an update when it ships. - Bolti Rakhi`,
   });
 
   return true;
