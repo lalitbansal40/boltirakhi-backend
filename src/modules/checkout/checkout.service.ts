@@ -230,7 +230,7 @@ export async function listOwnOrders(userId: string, query: Record<string, unknow
     Order.find(filter)
       // Only what a list row shows. Fetching every item of every order to
       // render one thumbnail each is work nobody sees.
-      .select('orderNumber status payment.status amount.totalPaise items createdAt')
+      .select('orderNumber status payment.status amount.totalPaise items hasBolti createdAt')
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -247,6 +247,9 @@ export async function listOwnOrders(userId: string, query: Record<string, unknow
     itemCount: order.items.length,
     firstItemTitle: order.items[0]?.title ?? null,
     firstItemImage: order.items[0]?.image ?? null,
+    // Just the flag. The token stays on the detail page — a list has no use
+    // for it, and it is one more private string per row for nothing.
+    hasBolti: order.hasBolti,
   }));
 
   return buildPaginated(items, total, page, limit);
