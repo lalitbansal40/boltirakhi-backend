@@ -1,14 +1,13 @@
 import { emailSender } from './email';
 import { smsSender } from './sms';
 import type { Channel, ChannelSender, NotifyPayload, NotifyResult } from './types';
-import { whatsappSender } from './whatsapp';
 
 export type { Channel, NotifyPayload, NotifyResult } from './types';
 
 /**
  * The one way to send a notification.
  *
- * Nothing outside this folder should import sms.ts, email.ts or whatsapp.ts
+ * Nothing outside this folder should import sms.ts or email.ts
  * directly. Keeping the entry point single is what lets a provider be swapped
  * — or email finally be turned on — without touching a single caller.
  */
@@ -16,7 +15,6 @@ export type { Channel, NotifyPayload, NotifyResult } from './types';
 const SENDERS: Record<Channel, ChannelSender> = {
   sms: smsSender,
   email: emailSender,
-  whatsapp: whatsappSender,
 };
 
 /**

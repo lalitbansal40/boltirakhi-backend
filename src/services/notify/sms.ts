@@ -45,6 +45,10 @@ export const smsSender: ChannelSender = {
   enabled,
 
   async send(payload: NotifyPayload): Promise<NotifyResult> {
+    if (!payload.message) {
+      return { ok: false, channel: 'sms', error: 'SMS needs a message' };
+    }
+
     const mobile = toGatewayNumber(payload.to);
     if (!mobile) {
       return { ok: false, channel: 'sms', error: 'Not a valid Indian mobile number' };

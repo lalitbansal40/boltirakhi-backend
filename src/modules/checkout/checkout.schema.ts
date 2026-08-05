@@ -37,6 +37,9 @@ export const createOrderSchema = z.object({
   items: z.array(orderItemSchema).min(1, 'Your cart is empty').max(50),
   shippingAddress: addressSchema,
   couponCode: z.string().trim().min(1).max(40).optional(),
+  // Optional on purpose. Required here would cost checkouts, and the SMS goes
+  // out either way, so nobody is left without confirmation.
+  customerEmail: z.string().trim().email().max(120).optional(),
 });
 
 export const verifyPaymentSchema = z.object({

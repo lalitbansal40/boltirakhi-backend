@@ -57,6 +57,14 @@ export interface IOrder extends Document<Types.ObjectId> {
    * that caused it after that code has been edited or switched off.
    */
   couponId?: Types.ObjectId;
+  /**
+   * Where the receipt was sent, if one was given.
+   *
+   * Stored on the order, not on the user: User.email is unique+sparse and
+   * belongs to admins, so two customers sharing an address there would break
+   * checkout outright. This is a copy, like the shipping address.
+   */
+  customerEmail?: string;
   payment: {
     provider: string;
     orderId?: string;
@@ -146,6 +154,7 @@ const orderSchema = new Schema<IOrder>(
     isInternational: { type: Boolean, default: false },
     hasBolti: { type: Boolean, default: false },
     couponId: { type: Schema.Types.ObjectId, ref: 'Coupon' },
+    customerEmail: { type: String, trim: true, lowercase: true },
 
     payment: {
       provider: { type: String, default: 'razorpay' },

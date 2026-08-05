@@ -11,6 +11,8 @@ import { nextOrderNumberWithRetry } from '../../utils/orderNumber';
 import { ApiError } from '../../utils/ApiError';
 import { buildPaginated, parsePagination } from '../../utils';
 import { notify } from '../../services/notify';
+import { orderConfirmationEmail } from '../../services/notify/templates/order-confirmation';
+import { SUPPORT_PHONE } from '../../config/business';
 import type { CreateOrderInput, VerifyPaymentInput } from './checkout.schema';
 
 /**
@@ -57,6 +59,7 @@ export async function createOrder(userId: string, input: CreateOrderInput) {
     isInternational: input.shippingAddress.country.trim().toLowerCase() !== 'india',
     hasBolti: cart.hasBolti,
     couponId: cart.couponId,
+    customerEmail: input.customerEmail,
     payment: { provider: 'razorpay', status: 'pending' },
     status: 'created',
     statusHistory: [{ status: 'created', at: new Date() }],
@@ -126,6 +129,33 @@ async function markPaid(order: IOrder, paymentId: string, signature?: string) {
     to: order.shippingAddress.phone,
     message: `Order ${order.orderNumber} confirmed. Rs ${rupees} paid. We will send an update when it ships. - Bolti Rakhi`,
   });
+
+  /**
+   * The receipt, when an email was given.
+   *
+   * Inside this function, which returns early if the order is already paid —
+   * so the browser callback and the webhook between them can only ever send
+   * one. Fire and forget, like the SMS: a receipt that fails must not undo a
+   * payment that succeeded.
+   */
+  if (order.customerEmail) {
+    const mail = orderConfirmationEmail({
+      orderNumber: order.orderNumber,
+      items: order.items.map((item) => ({
+        title: item.title,
+        qty: item.qty,
+        pricePaise: item.pricePaise,
+      })),
+      subtotalPaise: order.amount.subtotalPaise,
+      shippingPaise: order.amount.shippingPaise,
+      discountPaise: order.amount.discountPaise,
+      totalPaise: order.amount.totalPaise,
+      address: order.shippingAddress,
+      supportPhone: SUPPORT_PHONE,
+    });
+
+    void notify("email", { to: order.customerEmail, ...mail });
+  }
 
   return true;
 }

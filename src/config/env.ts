@@ -90,7 +90,10 @@ const envSchema = z.object({
   SMS_USERNAME: z.string().optional(),
   SMS_PASSWORD: z.string().optional(),
   EMAIL_ENABLED: booleanish.default(false),
-  WHATSAPP_ENABLED: booleanish.default(false),
+  RESEND_API_KEY: z.string().optional(),
+  // Must be an address on a domain verified with Resend, or every send is a
+  // 403 — and the error reads like a credentials problem rather than a DNS one.
+  EMAIL_FROM: z.string().optional(),
 
   // ---- Shiprocket (Phase C.6) ----
   SHIPROCKET_EMAIL: z.string().optional(),
