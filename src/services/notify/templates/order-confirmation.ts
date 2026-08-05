@@ -1,3 +1,9 @@
+import {
+  ADDRESS_ONE_LINE,
+  GST_NUMBER,
+  LEGAL_NAME,
+  SUPPORT_EMAIL,
+} from '../../../config/business';
 import { env } from '../../../config/env';
 
 /**
@@ -137,7 +143,19 @@ export function orderConfirmationEmail(input: OrderEmailInput): {
 
         <tr><td style="border-top:1px solid #eee;padding-top:16px;margin-top:16px;font-size:13px;color:#777;">
           We will send you an SMS when it ships.<br>
-          Questions? Call us on <strong style="color:#333;">${esc(input.supportPhone)}</strong>.
+          Questions? Call us on <strong style="color:#333;">${esc(input.supportPhone)}</strong>
+          or write to <strong style="color:#333;">${esc(SUPPORT_EMAIL)}</strong>.
+        </td></tr>
+
+        <!--
+          The seller's own details, as a receipt is expected to carry them.
+          Still a table with inline styles: Gmail strips <style> blocks, so a
+          flex or grid footer would collapse into a stack of unstyled lines.
+        -->
+        <tr><td style="padding-top:14px;font-size:12px;color:#999;line-height:1.6;">
+          ${esc(LEGAL_NAME)}<br>
+          ${esc(ADDRESS_ONE_LINE)}<br>
+          GSTIN: ${esc(GST_NUMBER)}
         </td></tr>
 
       </table>
@@ -175,7 +193,11 @@ export function orderConfirmationEmail(input: OrderEmailInput): {
       : []),
     '',
     'We will send an SMS when it ships.',
-    `Questions? Call ${input.supportPhone}.`,
+    `Questions? Call ${input.supportPhone} or write to ${SUPPORT_EMAIL}.`,
+    '',
+    LEGAL_NAME,
+    ADDRESS_ONE_LINE,
+    `GSTIN: ${GST_NUMBER}`,
   ].join('\n');
 
   return { subject, html, text };

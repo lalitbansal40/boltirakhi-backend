@@ -236,7 +236,21 @@ export async function cancel(
   if (shouldRestoreStock) {
     await Promise.all(
       order.items.map((item) =>
-        Product.updateOne({ _id: item.productId }, { $inc: { stock: item.qty } }),
+        Product.updateOne(
+          { _id: item.productId },
+          {
+            /**
+             * 🔴 Rakhis, not packs — the same arithmetic that took them out.
+             *
+             * Payment decrements `packSize x qty`. Adding back `qty` alone
+             * returned one rakhi for a cancelled pack of eight and quietly
+             * destroyed the other seven: no error, no log, and the shelf count
+             * only ever drifts one way. Over a season of cancellations the shop
+             * would refuse orders for stock it was still holding.
+             */
+            $inc: { stock: (item.packSize ?? 1) * item.qty },
+          },
+        ),
       ),
     );
   }
