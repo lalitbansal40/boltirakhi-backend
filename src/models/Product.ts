@@ -26,9 +26,27 @@ export interface IProduct extends Document<Types.ObjectId>, ISeoFields {
   images: Types.DocumentArray<IStoredImage>;
   /** Optional — most products are stills only. */
   video?: IStoredVideo;
+  /**
+   * The price of ONE rakhi. Also the price of the pack-of-1 variant.
+   *
+   * Kept on the product itself because the catalogue sorts and filters on it —
+   * moving it onto a variant would take half the listing code with it.
+   */
   pricePaise: number;
   mrpPaise: number;
+  /**
+   * Rakhis in stock, not packs.
+   *
+   * One pool, deliberately. A pack of 8 sold takes 8 from here. Per-pack
+   * counters would be five numbers describing one shelf, and one day they
+   * would stop agreeing — with nobody able to say which was right.
+   */
   stock: number;
+  /**
+   * Multi-packs. Empty means the product sells as a single only, which is the
+   * default and what every existing product does.
+   */
+  variants: Types.DocumentArray<IPackVariant>;
   sku?: string;
   type: ProductType;
   attributes: Map<string, string>;
@@ -40,6 +58,26 @@ export interface IProduct extends Document<Types.ObjectId>, ISeoFields {
   createdAt: Date;
   updatedAt: Date;
   readonly discountPercent: number;
+}
+
+/**
+ * The pack sizes a customer can buy.
+ *
+ * A closed list rather than any number: an arbitrary "pack of 3" would need
+ * its own price, its own SKU and its own line in the warehouse, and nobody
+ * asked for one.
+ */
+export const PACK_SIZES = [1, 2, 4, 6, 8] as const;
+export type PackSize = (typeof PACK_SIZES)[number];
+
+export interface IPackVariant {
+  packSize: PackSize;
+  /** What the whole pack costs. NOT the single price times the size. */
+  pricePaise: number;
+  mrpPaise: number;
+  /** Its own code — this is what gets picked in the warehouse. */
+  sku: string;
+  isActive: boolean;
 }
 
 /** Rejects 499.5 outright; the `Paise` suffix is what stops someone entering 499 for ₹499. */
@@ -62,6 +100,28 @@ const dimensionsSchema = new Schema<IDimensionsCm>(
   { _id: false },
 );
 
+/**
+ * A multi-pack.
+ *
+ * Its price is entered, not calculated. A pack priced at exactly the single
+ * price times its size gives a customer no reason to buy it, so the number has
+ * to be a decision somebody made, not arithmetic.
+ */
+const packVariantSchema = new Schema<IPackVariant>(
+  {
+    packSize: { type: Number, required: true, enum: PACK_SIZES },
+    pricePaise: paiseField,
+    mrpPaise: paiseField,
+    sku: { type: String, required: true, trim: true, uppercase: true },
+    isActive: { type: Boolean, default: true },
+  },
+  { _id: true },
+);
+
+packVariantSchema.path("pricePaise").validate(function (this: IPackVariant, value: number) {
+  return value <= this.mrpPaise;
+}, "pack price cannot be above its MRP");
+
 const productSchema = new Schema<IProduct>(
   {
     title: { type: String, required: true, trim: true, maxlength: 160 },
@@ -71,6 +131,9 @@ const productSchema = new Schema<IProduct>(
 
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
     images: { type: [storedImageSchema], default: [] },
+    // Empty by default: every product sells as a single until somebody adds
+    // packs, and the existing catalogue depends on that staying true.
+    variants: { type: [packVariantSchema], default: [] },
     // Optional: every product entered before this existed has none.
     video: { type: storedVideoSchema },
 
@@ -136,6 +199,17 @@ productSchema.index(
     name: 'product_text_v2',
   },
 );
+
+/**
+ * One entry per pack size.
+ *
+ * Two "pack of 4" rows would leave the interface picking whichever came first,
+ * and an admin staring at a price that is not the one they edited.
+ */
+productSchema.path('variants').validate(function (variants: IPackVariant[]) {
+  const sizes = variants.map((variant) => variant.packSize);
+  return new Set(sizes).size === sizes.length;
+}, 'A product cannot have two variants of the same pack size');
 
 productSchema.path('pricePaise').validate(function (this: IProduct, value: number) {
   return value <= this.mrpPaise;
