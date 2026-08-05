@@ -31,6 +31,22 @@ interface PublicCategoryRef {
   slug: string;
 }
 
+/**
+ * A multi-pack, as the shop sees it.
+ *
+ * `savingPaise` is computed here rather than in the browser. A number the
+ * interface works out itself is a second place it can be wrong, and this one
+ * is the reason anybody clicks a bigger pack.
+ */
+export interface PublicVariant {
+  packSize: number;
+  pricePaise: number;
+  mrpPaise: number;
+  /** What the pack saves against buying that many singles. Never below zero. */
+  savingPaise: number;
+  inStock: boolean;
+}
+
 export interface PublicProduct {
   _id: string;
   title: string;
@@ -45,6 +61,7 @@ export interface PublicProduct {
   discountPercent: number;
   /** Whether it can be bought — never how many are left. */
   inStock: boolean;
+  variants: PublicVariant[];
   type: string;
   tags?: string[];
   metaTitle?: string;
@@ -103,6 +120,21 @@ export function toPublicProduct(product: IProduct): PublicProduct {
     // the operation is, and a customer only ever needs to know whether they
     // can buy it.
     inStock: product.stock > 0,
+    /**
+     * Only variants that are switched on, and each carries a boolean rather
+     * than a count — the shelf quantity is nobody outside our business.
+     */
+    variants: (product.variants ?? [])
+      .filter((variant) => variant.isActive)
+      .sort((a, b) => a.packSize - b.packSize)
+      .map((variant) => ({
+        packSize: variant.packSize,
+        pricePaise: variant.pricePaise,
+        mrpPaise: variant.mrpPaise,
+        savingPaise: Math.max(0, product.pricePaise * variant.packSize - variant.pricePaise),
+        // A pack is only buyable if there are enough singles behind it.
+        inStock: product.stock >= variant.packSize,
+      })),
 
     type: product.type,
     tags: product.tags,

@@ -16,6 +16,7 @@ const objectId = z
 const orderItemSchema = z.object({
   productId: objectId,
   qty: z.number().int().min(1).max(20),
+  packSize: z.union([z.literal(1), z.literal(2), z.literal(4), z.literal(6), z.literal(8)]).optional(),
   /** Set once the sister has recorded her message for this line. */
   boltiMessageId: objectId.optional(),
 });

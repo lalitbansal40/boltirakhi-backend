@@ -20,6 +20,10 @@ export const priceCartSchema = z.object({
       z.object({
         productId: objectId,
         qty: z.number().int().min(1).max(20),
+        // Absent means a single. A size outside the list is refused rather
+        // than quietly treated as one — a cart asking for a pack of 3 is a
+        // cart that has been tampered with.
+        packSize: z.union([z.literal(1), z.literal(2), z.literal(4), z.literal(6), z.literal(8)]).optional(),
       }),
     )
     .max(50),

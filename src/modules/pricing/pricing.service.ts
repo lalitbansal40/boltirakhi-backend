@@ -32,6 +32,10 @@ const UNKNOWN_COURIER_QUOTE_PAISE = 0;
 export type LineIssue = 'unavailable' | 'insufficient_stock';
 
 export interface PricedLine {
+  /** How many rakhis are in one of these. 1 for a plain single. */
+  packSize: number;
+  /** "Pack of 4", or empty for a single. Copied onto the order as-is. */
+  packLabel?: string;
   productId: Types.ObjectId;
   title: string;
   slug: string;
@@ -66,7 +70,13 @@ export interface PricedCart {
 }
 
 export interface PriceCartInput {
-  items: { productId: string; qty: number; boltiMessageId?: string }[];
+  items: {
+    productId: string;
+    qty: number;
+    /** Missing means a single — that is what every pre-variant cart holds. */
+    packSize?: number;
+    boltiMessageId?: string;
+  }[];
   couponCode?: string;
   /**
    * true  — checkout: anything wrong stops the whole thing.
@@ -113,8 +123,54 @@ export async function priceCart(input: PriceCartInput): Promise<PricedCart> {
         title: 'Item no longer available',
         slug: '',
         pricePaise: 0,
+        packSize: line.packSize ?? 1,
         qty: line.qty,
         type: 'normal' as ProductType,
+        issue: 'unavailable',
+      };
+    }
+
+    /**
+     * A missing packSize means a single.
+     *
+     * Every cart saved before packs existed looks exactly like this, and they
+     * are sitting in people's browsers right now.
+     */
+    const packSize = line.packSize ?? 1;
+
+    /**
+     * 🔴 The price comes from the variant, never from the product.
+     *
+     * A pack of 8 charged at the single price is the difference we would have
+     * to absorb on every one of those orders — and it is invisible in testing
+     * unless the variant's price is deliberately different.
+     *
+     * Only an active variant counts. One that was switched off must not still
+     * be sellable through a stale cart.
+     */
+    const variant =
+      packSize === 1
+        ? undefined
+        : product.variants?.find((v) => v.packSize === packSize && v.isActive);
+
+    if (packSize !== 1 && !variant) {
+      if (input.strict) {
+        throw new ApiError(
+          400,
+          `That pack is no longer available for ${product.title}`,
+          'VARIANT_UNAVAILABLE',
+        );
+      }
+
+      return {
+        productId: product._id,
+        title: product.title,
+        slug: product.slug,
+        image: product.images?.[0]?.url,
+        pricePaise: 0,
+        packSize,
+        qty: line.qty,
+        type: product.type,
         issue: 'unavailable',
       };
     }
@@ -124,10 +180,12 @@ export async function priceCart(input: PriceCartInput): Promise<PricedCart> {
       title: product.title,
       slug: product.slug,
       image: product.images?.[0]?.url,
-      // `pricePaise` is what is charged; `mrpPaise` is only the struck-through
-      // number beside it. Charging the MRP would overcharge every discounted
-      // product in the shop.
-      pricePaise: product.pricePaise,
+      // A variant's price is the price of the whole pack. For a single it is
+      // the product's own — `mrpPaise` is only the struck-through number, and
+      // charging that would overcharge every discounted product in the shop.
+      pricePaise: variant ? variant.pricePaise : product.pricePaise,
+      packSize,
+      packLabel: packSize > 1 ? `Pack of ${packSize}` : undefined,
       qty: line.qty,
       type: product.type,
       boltiMessageId: line.boltiMessageId
@@ -135,7 +193,14 @@ export async function priceCart(input: PriceCartInput): Promise<PricedCart> {
         : undefined,
     };
 
-    if (product.stock < line.qty) {
+    /**
+     * 🔴 Stock is counted in rakhis, so two packs of 8 need sixteen.
+     *
+     * Checking `qty` alone would sell eight rakhis off a shelf holding one.
+     */
+    const rakhisNeeded = packSize * line.qty;
+
+    if (product.stock < rakhisNeeded) {
       if (input.strict) {
         throw new ApiError(
           409,
@@ -143,7 +208,13 @@ export async function priceCart(input: PriceCartInput): Promise<PricedCart> {
           'INSUFFICIENT_STOCK',
         );
       }
-      return { ...base, issue: 'insufficient_stock', availableQty: product.stock };
+
+      // How many of THIS pack they could still have, not the shelf count.
+      return {
+        ...base,
+        issue: 'insufficient_stock',
+        availableQty: Math.floor(product.stock / packSize),
+      };
     }
 
     return base;

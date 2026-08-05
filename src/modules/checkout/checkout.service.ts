@@ -93,10 +93,19 @@ export async function createOrder(userId: string, input: CreateOrderInput) {
 async function markPaid(order: IOrder, paymentId: string, signature?: string) {
   if (order.payment.status === 'paid') return false;
 
-  // Stock comes off here — not at order creation. See D10 at the top.
+  /**
+   * Stock comes off here — not at order creation. See D10 at the top.
+   *
+   * 🔴 In rakhis, not in lines: two packs of 8 take sixteen. Decrementing by
+   * qty alone would sell eight and record one, and the shelf count would drift
+   * quietly for weeks before anyone noticed it was wrong.
+   */
   await Promise.all(
     order.items.map((item) =>
-      Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.qty } }),
+      Product.updateOne(
+        { _id: item.productId },
+        { $inc: { stock: -((item.packSize ?? 1) * item.qty) } },
+      ),
     ),
   );
 

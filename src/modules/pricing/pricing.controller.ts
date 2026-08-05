@@ -21,6 +21,8 @@ function toPublicCart(cart: PricedCart) {
       image: line.image,
       pricePaise: line.pricePaise,
       qty: line.qty,
+      packSize: line.packSize,
+      packLabel: line.packLabel,
       type: line.type,
       lineTotalPaise: line.issue ? 0 : line.pricePaise * line.qty,
       issue: line.issue,

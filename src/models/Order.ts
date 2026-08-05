@@ -20,6 +20,10 @@ export interface IOrderItem {
   pricePaise: number;
   qty: number;
   type: ProductType;
+  /** Rakhis in one unit of this line. 1 for a single. */
+  packSize: number;
+  /** "Pack of 4" — a copy, like the title and the price. */
+  packLabel?: string;
   boltiMessageId?: Types.ObjectId;
 }
 
@@ -111,6 +115,10 @@ const orderItemSchema = new Schema<IOrderItem>(
     pricePaise: paise,
     qty: { type: Number, required: true, min: 1, validate: { validator: Number.isInteger, message: 'qty must be a whole number' } },
     type: { type: String, enum: ['normal', 'bolti'], default: 'normal' },
+    // Defaults to 1 so every order placed before packs existed still reads
+    // correctly, and the arithmetic below keeps working on it.
+    packSize: { type: Number, default: 1, min: 1 },
+    packLabel: { type: String },
     boltiMessageId: { type: Schema.Types.ObjectId, ref: 'BoltiMessage' },
   },
   { _id: true },
