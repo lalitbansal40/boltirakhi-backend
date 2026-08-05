@@ -153,6 +153,7 @@ async function markPaid(order: IOrder, paymentId: string, signature?: string) {
       items: order.items.map((item) => ({
         title: item.title,
         qty: item.qty,
+        packLabel: item.packLabel,
         pricePaise: item.pricePaise,
       })),
       subtotalPaise: order.amount.subtotalPaise,

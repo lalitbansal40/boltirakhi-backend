@@ -54,6 +54,18 @@ export interface PricedLine {
    * full inventory count — that is not the customer's business.
    */
   availableQty?: number;
+  /**
+   * The pack sizes this product can be bought in right now, smallest first and
+   * always including 1.
+   *
+   * The cart needs it to offer a pack switcher. Without it the cart would have
+   * to guess, and offer packs the product does not sell — the customer would
+   * pick one and the order would come back a 400.
+   *
+   * Not part of the order: `items: cart.lines` hands the whole line to
+   * Mongoose, which drops anything the Order schema does not declare.
+   */
+  availablePacks?: number[];
 }
 
 export interface PricedCart {
@@ -191,6 +203,14 @@ export async function priceCart(input: PriceCartInput): Promise<PricedCart> {
       boltiMessageId: line.boltiMessageId
         ? new Types.ObjectId(line.boltiMessageId)
         : undefined,
+      // A pack the shelf cannot cover is left out rather than offered and then
+      // refused. Stock is in rakhis, so a pack of 8 needs eight of them.
+      availablePacks: [
+        1,
+        ...(product.variants ?? [])
+          .filter((v) => v.isActive && product.stock >= v.packSize)
+          .map((v) => v.packSize),
+      ].sort((a, b) => a - b),
     };
 
     /**

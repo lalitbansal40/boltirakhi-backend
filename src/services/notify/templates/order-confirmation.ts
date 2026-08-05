@@ -15,7 +15,8 @@ import { env } from '../../../config/env';
 
 export interface OrderEmailInput {
   orderNumber: string;
-  items: { title: string; qty: number; pricePaise: number }[];
+  /** `packLabel` is absent on singles, and on every order placed before packs. */
+  items: { title: string; qty: number; packLabel?: string; pricePaise: number }[];
   subtotalPaise: number;
   shippingPaise: number;
   discountPaise: number;
@@ -70,7 +71,7 @@ export function orderConfirmationEmail(input: OrderEmailInput): {
       (item) => `
         <tr>
           <td style="padding:8px 0;font-size:14px;color:#333;">${esc(item.title)}<br>
-            <span style="color:#777;">Qty ${item.qty}</span>
+            <span style="color:#777;">${item.packLabel ? `${item.packLabel} &middot; ` : ''}Qty ${item.qty}</span>
           </td>
           <td style="padding:8px 0;font-size:14px;color:#333;text-align:right;white-space:nowrap;">
             ${rs(item.pricePaise * item.qty)}
@@ -154,7 +155,10 @@ export function orderConfirmationEmail(input: OrderEmailInput): {
     `Bolti Rakhi — order ${input.orderNumber} confirmed`,
     '',
     ...input.items.map(
-      (item) => `${item.title} x${item.qty}   ${rs(item.pricePaise * item.qty)}`,
+      (item) =>
+        `${item.title}${item.packLabel ? ` (${item.packLabel})` : ''} x${item.qty}   ${rs(
+          item.pricePaise * item.qty,
+        )}`,
     ),
     '',
     `Subtotal:  ${rs(input.subtotalPaise)}`,
