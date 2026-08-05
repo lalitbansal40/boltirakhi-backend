@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { requireAuth, requireRole } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import * as checkoutController from './checkout.controller';
-import { createOrderSchema, verifyPaymentSchema } from './checkout.schema';
+import { createOrderSchema, orderNumberSchema, verifyPaymentSchema } from './checkout.schema';
 
 /**
  * Customer-facing checkout.
@@ -37,3 +37,13 @@ checkoutRoutes.post(
 export const webhookRoutes = Router();
 
 webhookRoutes.post('/razorpay', checkoutController.webhook);
+
+/**
+ * Placed after the two POST routes so `/verify` can never be read as an
+ * order number.
+ */
+checkoutRoutes.get(
+  '/:orderNumber',
+  validate({ params: orderNumberSchema }),
+  checkoutController.getOne,
+);

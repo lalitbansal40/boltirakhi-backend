@@ -172,3 +172,27 @@ export async function handleWebhookEvent(event: {
   const changed = await markPaid(order, entity.id);
   return { handled: true, changed };
 }
+
+/**
+ * One of *this customer's* orders.
+ *
+ * 🔴 `userId` is part of the query, not a check applied afterwards.
+ *
+ * Order numbers run in sequence — BR-26-0001, 0002, 0003 — so anyone can type
+ * a neighbour's. Looking up by number alone and then comparing owners would
+ * work until the day someone edits this function and drops the comparison; a
+ * query that cannot match another person's row has no such day.
+ *
+ * A miss is "not found", never "not yours": confirming the order exists is
+ * itself information.
+ */
+export async function getOwnOrder(userId: string, orderNumber: string) {
+  const order = await Order.findOne({
+    orderNumber: orderNumber.trim().toUpperCase(),
+    userId: new Types.ObjectId(userId),
+  });
+
+  if (!order) throw ApiError.notFound('Order not found');
+
+  return order;
+}

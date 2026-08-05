@@ -47,3 +47,8 @@ export const verifyPaymentSchema = z.object({
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type VerifyPaymentInput = z.infer<typeof verifyPaymentSchema>;
+
+/** BR-26-0001 and nothing else — a loose pattern here becomes a regex in a query. */
+export const orderNumberSchema = z.object({
+  orderNumber: z.string().trim().regex(/^BR-\d{2}-\d{4,}$/i, 'must be a valid order number'),
+});
