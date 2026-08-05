@@ -3,7 +3,12 @@ import { Router } from 'express';
 import { requireAuth, requireRole } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import * as controller from './account.controller';
-import { addressBodySchema, addressIdSchema, addressPatchSchema } from './account.schema';
+import {
+  addressBodySchema,
+  addressIdSchema,
+  addressPatchSchema,
+  profilePatchSchema,
+} from './account.schema';
 
 /**
  * The customer's own account data.
@@ -34,4 +39,14 @@ accountRoutes.delete(
   '/addresses/:id',
   validate({ params: addressIdSchema }),
   controller.remove,
+);
+
+/**
+ * The customer's own profile. Separate from /api/users, which is admin-only
+ * and must stay that way.
+ */
+accountRoutes.patch(
+  '/profile',
+  validate({ body: profilePatchSchema }),
+  controller.updateProfile,
 );

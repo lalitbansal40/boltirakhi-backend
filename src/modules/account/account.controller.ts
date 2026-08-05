@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 
 import { asyncHandler, sendSuccess } from '../../utils';
 import * as accountService from './account.service';
-import type { AddressBody, AddressPatch } from './account.schema';
+import type { AddressBody, AddressPatch, ProfilePatch } from './account.schema';
 
 /** Only what the address book needs to show. */
 function toPublicAddress(address: {
@@ -47,4 +47,16 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await accountService.removeAddress(req.user!.id, req.params.id);
   sendSuccess(res, null, 'Address removed');
+});
+
+export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
+  const user = await accountService.updateProfile(req.user!.id, req.body as ProfilePatch);
+
+  // A small shape, not the document: passwordHash, isBlocked and the rest have
+  // no business crossing the wire.
+  sendSuccess(
+    res,
+    { user: { id: String(user._id), name: user.name ?? null, phone: user.phone ?? null } },
+    'Saved',
+  );
 });

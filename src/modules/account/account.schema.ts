@@ -35,3 +35,11 @@ export const addressIdSchema = z.object({
 
 export type AddressBody = z.infer<typeof addressBodySchema>;
 export type AddressPatch = z.infer<typeof addressPatchSchema>;
+
+export const profilePatchSchema = z.object({
+  // Empty string allowed: the field is optional on the model. Two characters
+  // is the floor for anything that is not empty — one letter is a typo.
+  name: z.union([z.literal(''), z.string().trim().min(2).max(100)]).optional(),
+});
+
+export type ProfilePatch = z.infer<typeof profilePatchSchema>;

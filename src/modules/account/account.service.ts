@@ -133,3 +133,27 @@ export async function removeAddress(userId: string, addressId: string): Promise<
  * address it shipped to. Past orders keep showing where they actually went,
  * however the customer edits their address book afterwards.
  */
+
+/**
+ * The customer's own name.
+ *
+ * 🔴 Only `User.name`. An order's `shippingAddress` holds a *copy* of the name
+ * that was on the parcel, and that copy must never be rewritten — a delivered
+ * order has to keep showing what was actually printed on the box, whatever the
+ * customer calls themselves afterwards.
+ */
+export async function updateProfile(
+  userId: string,
+  input: { name?: string },
+): Promise<IUser> {
+  const user = await loadUser(userId);
+
+  if (input.name !== undefined) {
+    // Empty is allowed — the field is optional, and someone may want to remove
+    // a name they only gave to get a parcel delivered.
+    user.name = input.name.trim() || undefined;
+  }
+
+  await user.save();
+  return user;
+}
