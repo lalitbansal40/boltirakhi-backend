@@ -5,6 +5,7 @@ import { ApiError } from '../../utils/ApiError';
 import { verifyWebhookSignature } from '../../services/razorpay';
 import { paymentStatus } from '../../config/payment';
 import type { IOrder } from '../../models/Order';
+import { BoltiMessage } from '../../models/BoltiMessage';
 import * as checkoutService from './checkout.service';
 import type { CreateOrderInput, VerifyPaymentInput } from './checkout.schema';
 
@@ -103,7 +104,33 @@ function toPublicOrder(order: IOrder) {
   };
 }
 
+/**
+ * The bolti tokens on this order, so the confirmation page can link straight
+ * to the recorder.
+ *
+ * Safe to include: the order was already proved to belong to this customer,
+ * and these are her own messages.
+ */
+async function boltiTokensFor(order: IOrder): Promise<Record<string, string>> {
+  const ids = order.items
+    .map((item) => item.boltiMessageId)
+    .filter((id): id is NonNullable<typeof id> => Boolean(id));
+
+  if (ids.length === 0) return {};
+
+  const messages = await BoltiMessage.find({ _id: { $in: ids } }).select('token status');
+
+  return Object.fromEntries(messages.map((m) => [String(m._id), m.token]));
+}
+
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
   const order = await checkoutService.getOwnOrder(req.user!.id, req.params.orderNumber);
-  sendSuccess(res, { order: toPublicOrder(order) });
+  const boltiTokens = await boltiTokensFor(order);
+
+  sendSuccess(res, {
+    order: {
+      ...toPublicOrder(order),
+      boltiTokens: Object.values(boltiTokens),
+    },
+  });
 });

@@ -1,7 +1,8 @@
 import { Types } from 'mongoose';
 
 import { createReadUrl } from '../../config/s3';
-import { BoltiMessage, Order, type IBoltiMessage } from '../../models';
+import { BoltiMessage, Order, User, type IBoltiMessage } from '../../models';
+import { notify } from '../../services/notify';
 import {
   ApiError,
   buildPaginated,
@@ -247,6 +248,29 @@ export async function reveal(token: string): Promise<Record<string, unknown>> {
   message.revealCount += 1;
   if (!message.revealedAt) message.revealedAt = new Date();
   await message.save();
+
+  /**
+   * Tell the sister, once.
+   *
+   * Only on the first open: a brother will watch this several times, and one
+   * text per view would be a nuisance she cannot switch off — and every one of
+   * them is billed.
+   *
+   * Fire and forget. notify() does not throw, and a text that fails must not
+   * stop him seeing the message he came for.
+   */
+  if (!wasRevealed && message.userId) {
+    void User.findById(message.userId)
+      .select('phone')
+      .then((sender) => {
+        if (!sender?.phone) return;
+        return notify('sms', {
+          to: sender.phone,
+          message: 'Your Bolti Rakhi message has been opened. He has seen it. - Bolti Rakhi',
+        });
+      })
+      .catch(() => undefined);
+  }
 
   return {
     status: 'ready',
