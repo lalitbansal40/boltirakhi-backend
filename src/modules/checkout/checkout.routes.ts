@@ -39,6 +39,12 @@ export const webhookRoutes = Router();
 webhookRoutes.post('/razorpay', checkoutController.webhook);
 
 /**
+ * The customer's own list. Declared before /:orderNumber so a bare GET is
+ * never read as an order number.
+ */
+checkoutRoutes.get('/', checkoutController.listMine);
+
+/**
  * Placed after the two POST routes so `/verify` can never be read as an
  * order number.
  */

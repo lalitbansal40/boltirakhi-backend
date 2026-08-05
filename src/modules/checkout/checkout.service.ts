@@ -9,6 +9,7 @@ import { priceCart } from '../pricing/pricing.service';
 import { createRazorpayOrder, verifyPaymentSignature } from '../../services/razorpay';
 import { nextOrderNumberWithRetry } from '../../utils/orderNumber';
 import { ApiError } from '../../utils/ApiError';
+import { buildPaginated, parsePagination } from '../../utils';
 import { notify } from '../../services/notify';
 import type { CreateOrderInput, VerifyPaymentInput } from './checkout.schema';
 
@@ -208,4 +209,45 @@ export async function getOwnOrder(userId: string, orderNumber: string) {
   if (!order) throw ApiError.notFound('Order not found');
 
   return order;
+}
+
+/**
+ * This customer's orders, newest first.
+ *
+ * 🔴 `userId` is the first thing in the filter, exactly as in `getOwnOrder`.
+ * A list route that forgets it does not leak one order — it hands over the
+ * whole shop's history in one response.
+ */
+export async function listOwnOrders(userId: string, query: Record<string, unknown>) {
+  const { page, limit, skip, sort } = parsePagination(query, {
+    allowedSortFields: ['createdAt'] as const,
+    defaultSort: '-createdAt',
+  });
+
+  const filter = { userId: new Types.ObjectId(userId) };
+
+  const [rows, total] = await Promise.all([
+    Order.find(filter)
+      // Only what a list row shows. Fetching every item of every order to
+      // render one thumbnail each is work nobody sees.
+      .select('orderNumber status payment.status amount.totalPaise items createdAt')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Order.countDocuments(filter),
+  ]);
+
+  const items = rows.map((order) => ({
+    orderNumber: order.orderNumber,
+    status: order.status,
+    paymentStatus: order.payment.status,
+    placedAt: order.createdAt,
+    totalPaise: order.amount.totalPaise,
+    itemCount: order.items.length,
+    firstItemTitle: order.items[0]?.title ?? null,
+    firstItemImage: order.items[0]?.image ?? null,
+  }));
+
+  return buildPaginated(items, total, page, limit);
 }

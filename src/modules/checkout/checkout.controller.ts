@@ -134,3 +134,11 @@ export const getOne = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 });
+
+export const listMine = asyncHandler(async (req: Request, res: Response) => {
+  const result = await checkoutService.listOwnOrders(
+    req.user!.id,
+    (req.validatedQuery ?? req.query) as Record<string, unknown>,
+  );
+  sendSuccess(res, result);
+});
