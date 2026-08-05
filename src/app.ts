@@ -40,6 +40,40 @@ const DB_STATE: Record<number, string> = {
   3: 'disconnecting',
 };
 
+/**
+ * Whether a browser origin is one of ours.
+ *
+ * An exact match against CORS_ORIGINS, plus the www / non-www twin of each.
+ *
+ * Those two are the same site to everyone except this check. Listing only one
+ * produces a failure that looks like anything but CORS: pages render, because
+ * server-side fetches carry no Origin header, while every call the browser
+ * makes is refused — so the site appears to load and then quietly does
+ * nothing. That is a bad hour to spend, and it has already been spent once.
+ *
+ * This widens nothing meaningfully: whoever controls example.com controls
+ * www.example.com.
+ */
+function isAllowedOrigin(origin: string): boolean {
+  return env.CORS_ORIGINS.some((allowed) => {
+    if (allowed === origin) return true;
+
+    // Compare hosts with any leading "www." removed, but only when the scheme
+    // matches — http and https are different origins and must stay so.
+    try {
+      const a = new URL(allowed);
+      const b = new URL(origin);
+      return (
+        a.protocol === b.protocol &&
+        a.port === b.port &&
+        a.hostname.replace(/^www\./, '') === b.hostname.replace(/^www\./, '')
+      );
+    } catch {
+      return false;
+    }
+  });
+}
+
 export function createApp(): Application {
   const app = express();
 
@@ -55,7 +89,7 @@ export function createApp(): Application {
         // No Origin header: curl, Postman, server-to-server.
         if (!origin) return callback(null, true);
 
-        if (env.CORS_ORIGINS.includes(origin)) return callback(null, true);
+        if (isAllowedOrigin(origin)) return callback(null, true);
 
         // A plain Error would surface as a 500 — a rejected origin is a client
         // problem, and the tagged fields let the error handler say so.
