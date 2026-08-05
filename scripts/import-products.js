@@ -16,6 +16,10 @@
 const fs = require('fs');
 const path = require('path');
 
+// Credentials come from .env, never from the command line — a password typed
+// into a shell ends up in that shell's history file.
+require('dotenv').config();
+
 const API = process.env.API_BASE || 'http://localhost:5000/api';
 const IMAGE_ROOT =
   process.env.IMAGE_ROOT ||
@@ -39,8 +43,8 @@ async function login() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: process.env.ADMIN_EMAIL,
-      password: process.env.ADMIN_PASSWORD,
+      email: process.env.ADMIN_EMAIL || process.env.ADMIN_SEED_EMAIL,
+      password: process.env.ADMIN_PASSWORD || process.env.ADMIN_SEED_PASSWORD,
     }),
   });
 
