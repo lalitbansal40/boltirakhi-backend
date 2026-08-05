@@ -91,10 +91,51 @@ export const smsSender: ChannelSender = {
         };
       }
 
-      // The response shape has not been confirmed against the live gateway
-      // yet, so nothing is parsed out of it beyond the status. Once a real
-      // send has been observed, read the message id from here.
-      return { ok: true, channel: 'sms' };
+      /**
+       * A 200 is not a sent message.
+       *
+       * NotifyNow answers 200 with `success` inside the body, so treating the
+       * status alone as success reported delivery for messages that never
+       * left — which is exactly how a whole evening was lost once.
+       */
+      let body: {
+        success?: boolean;
+        message?: string;
+        messageId?: string;
+        metadata?: { resolvedPeId?: string };
+      } | null = null;
+
+      try {
+        body = JSON.parse(text);
+      } catch {
+        // Not JSON. Older gateways answer in plain text; treat a 200 as sent
+        // rather than failing an order over a response we cannot read.
+        return { ok: true, channel: 'sms' };
+      }
+
+      if (body?.success === false) {
+        return {
+          ok: false,
+          channel: 'sms',
+          error: `Gateway refused: ${body.message ?? 'no reason given'}`,
+        };
+      }
+
+      /**
+       * An empty PE ID means the message was accepted by the gateway and will
+       * be dropped by the operator: Indian transactional SMS requires DLT
+       * registration, and without it nothing is delivered while everything
+       * reports success. Worth saying out loud, because the symptom is
+       * silence.
+       */
+      if (body?.metadata && !body.metadata.resolvedPeId) {
+        console.warn(
+          `[sms] accepted with no DLT PE ID (messageId ${body.messageId ?? 'unknown'}). ` +
+            'The operator will most likely drop this. Check the DLT template and sender ID.',
+        );
+      }
+
+      return { ok: true, channel: 'sms', id: body?.messageId };
     } catch (error) {
       const aborted = error instanceof Error && error.name === 'AbortError';
       return {
