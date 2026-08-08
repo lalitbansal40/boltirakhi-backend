@@ -22,6 +22,26 @@ const TIMEOUT_MS = 10_000;
 const enabled = env.SMS_ENABLED;
 
 /**
+ * Every message goes out with the brand in front of it.
+ *
+ * This is not cosmetic. A message that opens with the code itself — "123456 is
+ * your verification code…" — is accepted by the gateway, billed a credit, and
+ * then dropped before it reaches the handset, while the API still answers
+ * `success: true` with a messageId. The identical text sent as "Bolti Rakhi:
+ * 123456 is your…" arrives.
+ *
+ * Verified on 2026-08-09 by sending both wordings to the same handset on the
+ * same account minutes apart: the brand-led one arrived, the code-led one did
+ * not. This had silently broken customer login — every OTP looked sent.
+ */
+const BRAND = 'Bolti Rakhi';
+
+function withBrand(message: string): string {
+  // A message that already leads with the brand must not carry it twice.
+  return message.startsWith(BRAND) ? message : `${BRAND}: ${message}`;
+}
+
+/**
  * NotifyNow wants a bare 91XXXXXXXXXX — no plus, no spaces, no leading zero.
  *
  * Numbers reach us in every shape a person can type one, so this normalises
@@ -54,10 +74,14 @@ export const smsSender: ChannelSender = {
       return { ok: false, channel: 'sms', error: 'Not a valid Indian mobile number' };
     }
 
+    // Built before the enabled check so the console output shows exactly what
+    // a real send would deliver, prefix and all.
+    const message = withBrand(payload.message);
+
     if (!enabled) {
       // Development has no gateway credentials, and an OTP nobody can read is
       // an OTP nobody can test with. Printed, never returned to the caller.
-      console.info(`[sms:disabled] to ${mobile}: ${payload.message}`);
+      console.info(`[sms:disabled] to ${mobile}: ${message}`);
       return { ok: true, channel: 'sms', id: 'console' };
     }
 
@@ -79,9 +103,13 @@ export const smsSender: ChannelSender = {
           username,
           password,
           mobile,
-          message: payload.message,
-          // Required by the gateway. Without it the message is accepted and
-          // then dropped, with every layer reporting success.
+          message,
+          // Sent so a registered DLT header can be swapped in later without a
+          // code change. It is NOT what decides delivery: messages sent
+          // without it arrive, and messages sent with it are still dropped
+          // when the body does not lead with the brand. An earlier comment
+          // here blamed this field for exactly that, which sent the last
+          // investigation down the wrong path.
           senderId: env.SMS_SENDER_ID,
         }),
         signal: controller.signal,

@@ -123,7 +123,9 @@ export async function requestOtp(rawPhone: string): Promise<{ expiresInSeconds: 
   // but it also means the result has to be checked rather than assumed.
   const result = await notify('sms', {
     to: phone,
-    message: `${code} is your Bolti Rakhi verification code. It is valid for ${OTP_TTL_MINUTES} minutes. Do not share it with anyone.`,
+    // The brand is added by the SMS sender, which must lead the message for it
+    // to be delivered at all — so it is deliberately not repeated here.
+    message: `${code} is your verification code. It is valid for ${OTP_TTL_MINUTES} minutes. Do not share it with anyone.`,
   });
 
   if (!result.ok) {
