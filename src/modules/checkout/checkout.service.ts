@@ -136,7 +136,7 @@ async function markPaid(order: IOrder, paymentId: string, signature?: string) {
 
   void notify('sms', {
     to: order.shippingAddress.phone,
-    message: `Your Bolti Rakhi order ${order.orderNumber} is confirmed. Rs ${rupees} paid. We will send an update when it ships.`,
+    message: `Order ${order.orderNumber} is confirmed. Rs ${rupees} paid. We will send an update when it ships.`,
   });
 
   /**
