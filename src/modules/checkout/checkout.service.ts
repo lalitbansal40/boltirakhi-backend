@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 
 import { Order, type IOrder } from '../../models/Order';
 import { Product } from '../../models/Product';
+import { createForOrderItem } from '../bolti/bolti.service';
 import { incrementUsage } from '../coupon/coupon.service';
 // The single source of truth for what a cart costs. The cart screen calls the
 // same function, which is the only way the two can be guaranteed to agree.
@@ -118,6 +119,32 @@ async function markPaid(order: IOrder, paymentId: string, signature?: string) {
   order.status = 'paid';
   order.statusHistory.push({ status: 'paid', at: new Date() });
   await order.save();
+
+  /**
+   * The draft message for every bolti line — one each, because an order can
+   * carry two bolti rakhis meant for two different brothers.
+   *
+   * Without this there is no token, so the confirmation page lists nothing and
+   * the recorder at /bolti/:token cannot be reached by any route. The whole
+   * point of the product is unreachable, and the order still looks perfectly
+   * successful — `hasBolti` is true, it is only the tokens that are missing.
+   *
+   * Here rather than at order creation: an unpaid order must not hand out a
+   * recording link. Awaited rather than fired off, because the browser is sent
+   * to the confirmation page as soon as this returns and that page reads the
+   * tokens — created a moment late, she arrives at a page offering her nothing.
+   */
+  await Promise.all(
+    order.items
+      .filter((item) => item.type === 'bolti')
+      .map((item) =>
+        createForOrderItem({
+          orderId: order._id,
+          orderItemId: item._id,
+          userId: order.userId,
+        }),
+      ),
+  );
 
   /**
    * Fire and forget: notify() never throws, and a confirmation SMS that fails
