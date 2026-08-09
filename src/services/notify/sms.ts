@@ -22,23 +22,26 @@ const TIMEOUT_MS = 10_000;
 const enabled = env.SMS_ENABLED;
 
 /**
- * Every message goes out with the brand in front of it.
+ * Every message goes out led by a DLT-registered brand name.
  *
- * This is not cosmetic. A message that opens with the code itself — "123456 is
- * your verification code…" — is accepted by the gateway, billed a credit, and
- * then dropped before it reaches the handset, while the API still answers
- * `success: true` with a messageId. The identical text sent as "Bolti Rakhi:
- * 123456 is your…" arrives.
+ * This is not cosmetic, and it is the whole reason SMS was broken. A message
+ * whose opening brand is not registered on DLT is accepted by the gateway,
+ * billed a credit, and then dropped by the operator before it reaches the
+ * handset — while the API answers `success: true` with a messageId. Nothing
+ * in the response distinguishes a delivered message from a discarded one.
  *
- * Verified on 2026-08-09 by sending both wordings to the same handset on the
- * same account minutes apart: the brand-led one arrived, the code-led one did
- * not. This had silently broken customer login — every OTP looked sent.
+ * Established on 2026-08-09 by sending, from one account to one handset
+ * minutes apart, the same text under two different opening names: the
+ * registered name arrived every time, the unregistered one never did.
+ *
+ * `SMS_BRAND_PREFIX` therefore has to match a name registered on DLT for the
+ * account in `SMS_USERNAME`. Setting it to anything else silently stops all
+ * SMS while every log still reads as success.
  */
-const BRAND = 'Bolti Rakhi';
-
 function withBrand(message: string): string {
+  const brand = env.SMS_BRAND_PREFIX;
   // A message that already leads with the brand must not carry it twice.
-  return message.startsWith(BRAND) ? message : `${BRAND}: ${message}`;
+  return message.startsWith(brand) ? message : `${brand}: ${message}`;
 }
 
 /**

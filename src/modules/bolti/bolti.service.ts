@@ -266,7 +266,7 @@ export async function reveal(token: string): Promise<Record<string, unknown>> {
         if (!sender?.phone) return;
         return notify('sms', {
           to: sender.phone,
-          message: 'Your message has been opened. He has seen it.',
+          message: 'Your Bolti Rakhi message has been opened. He has seen it.',
         });
       })
       .catch(() => undefined);

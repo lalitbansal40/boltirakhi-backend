@@ -95,6 +95,18 @@ const envSchema = z.object({
    * than a missing field.
    */
   SMS_SENDER_ID: z.string().default("INFO"),
+  /**
+   * The name every SMS must open with, and the single most important value
+   * here: operators drop a message whose opening brand is not registered on
+   * DLT, while the gateway still answers `success: true` and bills a credit.
+   *
+   * It is an env var rather than a constant because the registered name is not
+   * ours yet. Until Bolti Rakhi's own DLT header is approved, production runs
+   * a header that is already registered, and switching back afterwards must be
+   * one line in `.env` plus a restart — not a code change and a deploy during
+   * the Rakhi week.
+   */
+  SMS_BRAND_PREFIX: z.string().default('Bolti Rakhi'),
   EMAIL_ENABLED: booleanish.default(false),
   RESEND_API_KEY: z.string().optional(),
   // Must be an address on a domain verified with Resend, or every send is a

@@ -123,9 +123,14 @@ export async function requestOtp(rawPhone: string): Promise<{ expiresInSeconds: 
   // but it also means the result has to be checked rather than assumed.
   const result = await notify('sms', {
     to: phone,
-    // The brand is added by the SMS sender, which must lead the message for it
-    // to be delivered at all — so it is deliberately not repeated here.
-    message: `${code} is your verification code. It is valid for ${OTP_TTL_MINUTES} minutes. Do not share it with anyone.`,
+    /**
+     * The opening brand is prepended by the SMS sender and is whatever is
+     * registered on DLT — today that is not our own name. So the message says
+     * "for Bolti Rakhi" in the body, or a customer signing in here would get a
+     * code that appears to come from an unrelated company and reasonably
+     * ignore it as a scam.
+     */
+    message: `${code} is your OTP for Bolti Rakhi. Valid for ${OTP_TTL_MINUTES} min. Do not share this code with anyone.`,
   });
 
   if (!result.ok) {
